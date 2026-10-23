@@ -1,7 +1,7 @@
 # Agar Nova
 
 Réplica de **Agar.io** en HTML5 (Canvas 2D), en un solo archivo `index.html` sin dependencias.
-Jugable en **PC, móvil y tablet**.
+Jugable en **PC, móvil y tablet**, con tema **negro** y **blanco**.
 
 ## Cómo jugar
 
@@ -9,26 +9,42 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 
 | Acción          | PC                | Móvil / Tablet                       |
 |-----------------|-------------------|--------------------------------------|
-| Moverse         | Ratón             | Arrastra el dedo (joystick flotante) |
+| Moverse         | Ratón             | Arrastra el dedo (joystick fijo)     |
 | Dividirse       | `Espacio`         | Botón **DIVIDIR**                    |
 | Expulsar masa   | `W` (mantener)    | Botón **MASA** (mantener)            |
 | Zoom            | Rueda del ratón   | Automático                           |
 | Pausa           | `Esc` / `P`       | Botón de pausa                       |
-| Silenciar       | `M`               | Menú / pausa                         |
+| Cambiar tema    | `T`               | Menú / Ajustes                       |
+| Silenciar       | `M`               | Ajustes                              |
 
 ## Características
 
-- Mecánicas de Agar.io: comer comida y células un 25 % más pequeñas, dividirse (hasta 16 células),
+- **Mecánicas de Agar.io:** comer comida y células un 25 % más pequeñas, dividirse (hasta 16 células),
   fusión tras un tiempo, expulsar masa, virus que revientan a las células grandes, alimentar virus
-  (7 veces) para dispararlos, decaimiento de masa.
-- **Bots inteligentes** con personalidad y nivel de habilidad: huyen de amenazas (incluido el
-  alcance de división del rival), persiguen presas con predicción de movimiento, atacan
-  dividiéndose, se esconden en virus cuando son pequeños, evitan virus cuando son grandes y los
-  más hábiles disparan virus contra rivales grandes. Crecen, se atacan entre ellos y reaparecen.
+  (7 veces) para dispararlos, pérdida de masa en células grandes y protección de 3 s al aparecer.
+- **Bots inteligentes** con personalidad y nivel de habilidad: huyen de amenazas (incluido el alcance
+  de división del rival), persiguen presas anticipando su movimiento, atacan dividiéndose, se esconden
+  en virus cuando son pequeños, evitan virus cuando son grandes y los más hábiles disparan virus contra
+  rivales grandes. Crecen, se atacan entre ellos y reaparecen.
+- **Ataque a células divididas:** cuando un bot está dividido, cada una de sus células persigue a la
+  presa más jugosa a su alcance (máximo dos por presa para no estorbarse) y valora más las piezas de
+  quien está dividido. La lógica es idéntica contra jugadores y bots.
 - 3 dificultades (16 / 26 / 36 bots).
-- UI con degradados y efecto cristal: menú animado con el mundo en vivo de fondo, clasificación,
-  minimapa, feed de eliminaciones, estadísticas al morir, récord guardado.
-- Animaciones: células con efecto gelatina, absorción animada, partículas, textos flotantes.
+- **Temas negro y blanco** (también en el lienzo: arena, cuadrícula, comida y minimapa), que se recuerdan.
+- **Interfaz:** pantalla de carga, menú con vista previa de la skin, estadísticas acumuladas
+  (récord, partidas, eliminados), hoja de **Ajustes** (tema, sonido y volumen, vibración, masa,
+  cuadrícula, FPS y calidad gráfica), clasificación con barras, minimapa, avisos de eliminaciones y de
+  llegar al puesto 1, pausa con estadísticas y pantalla de muerte con resumen.
+- **Icono** propio (`icons/`): favicon, icono de pantalla de inicio para iOS/Android y marca dentro del juego.
+- Accesibilidad: foco visible, roles ARIA, navegación con teclado y respeto a «reducir movimiento».
 - Sonido sintetizado con WebAudio y vibración en móvil.
-- Protección de 3 s al aparecer (se pierde al dividirse o expulsar).
 - Rendimiento: sprites pre-renderizados, rejilla espacial y resolución adaptativa.
+
+## Archivos
+
+| Archivo | Contenido |
+|---------|-----------|
+| `index.html` | El juego completo (HTML, CSS y JS; el icono va incrustado) |
+| `icons/icon.svg` | Icono vectorial |
+| `icons/icon-192.png`, `icons/icon-512.png` | Iconos PNG |
+| `icons/apple-touch-icon.png` | Icono de pantalla de inicio de iOS (180 px) |
