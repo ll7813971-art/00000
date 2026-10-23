@@ -52,6 +52,11 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - Sonido sintetizado con WebAudio y vibración en móvil.
 - Equilibrio a largo plazo: la pérdida de masa aumenta si la arena se satura o un jugador se vuelve
   descomunal, para que las partidas largas (sobre todo en Ultra) no acaben con células cubriéndolo todo.
+- **Colores:** los bots tienen colores aleatorios (tono, saturación y luminosidad al azar) y estrenan
+  un color nuevo cada vez que reaparecen. El jugador puede elegir la categoría **Color aleatorio** en el
+  menú (volver a pulsarla cambia de color); cada partida nueva sale con un color distinto.
+- **Movimiento de los bots más suave:** giran con inercia en vez de cambiar de rumbo en seco (el giro medio
+  baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
 - **Colisiones:** las células grandes ya no atraviesan los muros (antes podían quedar casi a medias fuera
   de la arena); si crecen pegadas a un muro se desplazan hacia dentro con suavidad. Las piezas propias se
   empujan entre sí sin hundirse unas en otras ni temblar, también contra un muro, y los virus y la masa

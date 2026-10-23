@@ -160,6 +160,8 @@ svg{display:block}
 .skins{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 8px;justify-items:center}
 .skin{width:100%;max-width:54px;aspect-ratio:1;border-radius:50%;position:relative;transition:transform .2s var(--ease),box-shadow .2s;
   box-shadow:inset -5px -7px 12px rgba(0,0,0,.28),inset 5px 5px 12px rgba(255,255,255,.32)}
+.skins.dim .skin{opacity:.45}
+.skins.dim .skin:hover{opacity:.9}
 .skin:hover{transform:scale(1.07)}
 .skin.sel{transform:scale(1.1);box-shadow:inset -5px -7px 12px rgba(0,0,0,.28),inset 5px 5px 12px rgba(255,255,255,.32),0 0 0 3px var(--ring-in),0 0 0 5px var(--text),0 6px 20px rgba(139,92,246,.45)}
 
@@ -482,6 +484,10 @@ body.touch .only-pc{display:none}
         </label>
       </div>
       <div class="label">Skin <em id="skinName">Aurora</em></div>
+      <div id="colorMode" class="seg seg-sm" role="radiogroup" aria-label="Tipo de color">
+        <button data-v="classic" role="radio">Colores</button>
+        <button data-v="random" role="radio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg>Color aleatorio</button>
+      </div>
       <div id="skins" class="skins" role="radiogroup" aria-label="Skin"></div>
       <div class="label">Dificultad <em id="diffInfo">26 bots</em></div>
       <div id="diff" class="seg" role="radiogroup" aria-label="Dificultad">
@@ -738,6 +744,11 @@ const SKINS = [
   { name: 'Rubí',     h1: 356, h2: 18 },
   { name: 'Arcoíris', rainbow: true }
 ];
+// Color aleatorio: tono, saturación y luminosidad al azar, y un segundo tono distinto para el degradado
+function randomSkin() {
+  const h1 = Math.random() * 360;
+  return { name: 'Aleatorio', h1, h2: (h1 + rand(35, 150)) % 360, s1: rand(78, 100), l1: rand(54, 68), s2: rand(70, 96), l2: rand(40, 54) };
+}
 const RAINBOW = ['#ff4d6d', '#ffb703', '#80ed99', '#4cc9f0', '#7b2ff7', '#f72585'];
 
 const PELLET_COLORS_LIGHT = ['#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#4f46e5', '#9333ea', '#c026d3', '#dc2626'];
@@ -782,12 +793,12 @@ function makeCellSprite(sk, size) {
   const R = size / 2, bw = R * 0.075;
   // anillo exterior
   g.beginPath(); g.arc(R, R, R, 0, TAU);
-  g.fillStyle = sk.rainbow ? '#3b1d6e' : `hsl(${sk.h2},80%,30%)`;
+  g.fillStyle = sk.rainbow ? '#3b1d6e' : `hsl(${sk.h2},${Math.min(85, sk.s2 || 80)}%,${Math.max(24, (sk.l2 || 48) - 18)}%)`;
   g.fill();
   // relleno degradado
   const lg = g.createLinearGradient(0, 0, size, size);
   if (sk.rainbow) RAINBOW.forEach((c, i) => lg.addColorStop(i / (RAINBOW.length - 1), c));
-  else { lg.addColorStop(0, `hsl(${sk.h1},95%,64%)`); lg.addColorStop(1, `hsl(${sk.h2},88%,48%)`); }
+  else { lg.addColorStop(0, `hsl(${sk.h1},${sk.s1 || 95}%,${sk.l1 || 64}%)`); lg.addColorStop(1, `hsl(${sk.h2},${sk.s2 || 88}%,${sk.l2 || 48}%)`); }
   g.beginPath(); g.arc(R, R, R - bw, 0, TAU);
   g.fillStyle = lg; g.fill();
   // profundidad
@@ -945,13 +956,15 @@ class Player {
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
     this.giantK = 1;                      // freno de masa para jugadores descomunales
+    this.smooth = true; this.urgent = false;   // bots: giran con inercia; urgent = huyendo de un peligro cercano
+    this.turnK = 9; this.turnMax = 7;          // suavizado y giro máximo (rad/s) en marcha normal
     this.nameSprite = null;
     this.setSkin(skin);
   }
   setSkin(skin) {
     this.skin = skin;
     this.sprite = makeCellSprite(skin, this.isBot ? botSpriteSize : 384);
-    this.color = skin.rainbow ? '#c084fc' : `hsl(${skin.h1},95%,62%)`;
+    this.color = skin.rainbow ? '#c084fc' : `hsl(${skin.h1},${skin.s1 || 95}%,${Math.min(64, skin.l1 || 62)}%)`;
   }
   get mass() { let m = 0; for (const c of this.cells) m += c.mass; return m; }
 }
@@ -969,6 +982,7 @@ class Cell {
     this.mergeAt = 0;
     this.gx = 0; this.gy = 0; this.goalUntil = 0;   // objetivo propio de la célula (caza de los bots)
     this.claims = 0; this.claimStamp = 0;           // cuántas células de un bot la persiguen a la vez
+    this.ha = NaN;                                  // rumbo suavizado de las células de los bots (radianes)
     this.born = now;
     this.dead = false;
   }
@@ -1068,8 +1082,7 @@ function pickName() {
 }
 
 function createBot(D) {
-  const h1 = Math.random() * 360;
-  const b = new Player(pickName(), { h1, h2: (h1 + rand(25, 70)) % 360 }, true);
+  const b = new Player(pickName(), randomSkin(), true);
   b.skill = rand(D.skill[0], D.skill[1]);
   b.aggr = rand(D.iq >= 2 ? 0.9 : 0.55, D.iq >= 2 ? 1.5 : 1.35) * (0.6 + 0.4 * b.skill);
   b.caution = rand(0.85, 1.25);
@@ -1206,6 +1219,7 @@ function splitPlayer(p) {
     c.mass = half; c.r = radiusOf(half);
     const n = new Cell(p, c.x + nx * c.r * 0.5, c.y + ny * c.r * 0.5, half);
     n.dr = c.dr * 0.72;
+    n.ha = c.ha;
     const dist = splitDistOf(n.r);
     n.vx = nx * dist * BOOST_K; n.vy = ny * dist * BOOST_K;
     c.mergeAt = n.mergeAt = now + mergeTimeOf(half * 2);
@@ -1526,6 +1540,7 @@ function botThink(b) {
     fx = b.wx - mx; fy = b.wy - my;
   }
 
+  b.urgent = threat > 0.35;               // si hay peligro cerca, giran más deprisa
   const ang = Math.atan2(fy, fx) + (Math.random() - 0.5) * (1 - b.skill) * 0.6;
   const reach = 500 + big.r * 2;
   b.tx = mx + Math.cos(ang) * reach;
@@ -1654,8 +1669,18 @@ function moveCells(p, dt) {
     const hg = c.goalUntil > now;                  // objetivo propio (bots dividiéndose) o el general
     const dx = (hg ? c.gx : p.tx) - c.x, dy = (hg ? c.gy : p.ty) - c.y, d = Math.sqrt(dx * dx + dy * dy);
     if (d > 1 && mul > 0) {
+      let ux = dx / d, uy = dy / d;
+      if (p.isBot && p.smooth) {          // los bots giran con inercia en vez de cambiar de rumbo en seco
+        const want = Math.atan2(uy, ux);
+        if (c.ha !== c.ha) c.ha = want;   // primera vez (NaN)
+        let diff = want - c.ha;
+        if (diff > Math.PI) diff -= TAU; else if (diff < -Math.PI) diff += TAU;
+        const maxTurn = (p.urgent ? 15 : p.turnMax) * dt;
+        c.ha += clamp(diff * (1 - Math.exp(-dt * (p.urgent ? 20 : p.turnK))), -maxTurn, maxTurn);
+        ux = Math.cos(c.ha); uy = Math.sin(c.ha);
+      }
       const sp = speedOf(c.mass) * mul * Math.min(1, d / (30 + c.r * 0.35));
-      c.x += (dx / d) * sp * dt; c.y += (dy / d) * sp * dt;
+      c.x += ux * sp * dt; c.y += uy * sp * dt;
     }
     c.x += c.vx * dt; c.y += c.vy * dt;
     c.vx *= damp; c.vy *= damp;
@@ -1796,7 +1821,7 @@ function update(dt) {
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     if (!p.alive) {
-      if (p.isBot && now >= p.respawnAt) spawnPlayer(p, START_MASS + rand(0, 14));
+      if (p.isBot && now >= p.respawnAt) { p.setSkin(randomSkin()); spawnPlayer(p, START_MASS + rand(0, 14)); }   // nueva vida, nuevo color
       continue;
     }
     if (p.isBot) {
@@ -2241,6 +2266,8 @@ const num = (v, d) => (Number.isFinite(+v) ? +v : d);
 const settings = {
   name: store.get('name', ''),
   skin: clamp(store.get('skin', 0) | 0, 0, SKINS.length - 1),
+  randomColor: store.get('randomColor', false) === true,
+  rolled: null,                       // color aleatorio que tendrá la próxima partida
   diff: DIFFS[store.get('diff', 'normal')] ? store.get('diff', 'normal') : 'normal',
   sound: store.get('sound', true) !== false,
   volume: clamp(num(store.get('volume', 0.8), 0.8), 0, 1),
@@ -2279,7 +2306,12 @@ function startGame() {
   if (worldDiff !== settings.diff) buildWorld(settings.diff);
   human.name = settings.name || 'Jugador';
   human.nameSprite = null;
-  human.setSkin(SKINS[settings.skin]);
+  // Color aleatorio: la partida usa el color que se ve en la vista previa y se prepara otro para la siguiente
+  if (settings.randomColor) {
+    human.setSkin(settings.rolled || randomSkin());
+    settings.rolled = randomSkin();
+    drawAvatar();
+  } else human.setSkin(SKINS[settings.skin]);
   human.lastDx = 1; human.lastDy = 0;
   if (human.alive) { human.cells.length = 0; human.alive = false; }
   resetStats();
@@ -2505,7 +2537,8 @@ function skinCss(sk) {
 function drawAvatar() {
   const cv = $('avatar'), g = cv.getContext('2d');
   g.clearRect(0, 0, cv.width, cv.height);
-  g.drawImage(makeCellSprite(SKINS[settings.skin], 224), 0, 0, cv.width, cv.height);
+  const sk = settings.randomColor ? (settings.rolled || (settings.rolled = randomSkin())) : SKINS[settings.skin];
+  g.drawImage(makeCellSprite(sk, 224), 0, 0, cv.width, cv.height);
 }
 
 // Aplica un ajuste con sus efectos secundarios y lo guarda
@@ -2575,12 +2608,23 @@ function buildUI() {
     b.title = sk.name;
     b.addEventListener('click', () => {
       settings.skin = i; store.set('skin', i);
+      settings.randomColor = false; store.set('randomColor', false);
       syncUI(); drawAvatar();
       Sound.init(); Sound.click();
     });
     wrap.appendChild(b);
   });
   $('nick').value = settings.name;
+
+  // categoría de color: «Colores» (las skins de siempre) o «Color aleatorio» (pulsar otra vez cambia el color)
+  for (const b of $('colorMode').children) {
+    b.addEventListener('click', () => {
+      const random = b.dataset.v === 'random';
+      if (random) settings.rolled = randomSkin();            // al elegirlo (o volver a pulsarlo) sale un color nuevo
+      settings.randomColor = random; store.set('randomColor', random);
+      syncUI(); drawAvatar(); Sound.init(); Sound.click();
+    });
+  }
 
   // dificultad
   for (const b of $('diff').children) {
@@ -2640,9 +2684,11 @@ function buildUI() {
 
 const SW_KEYS = { sound: 'sound', mass: 'showMass', grid: 'grid', fps: 'fps', vibrate: 'vibrate' };
 function syncUI() {
-  const sk = SKINS[settings.skin];
-  $('skinName').textContent = sk.name;
-  [...$('skins').children].forEach((b, i) => { b.classList.toggle('sel', i === settings.skin); b.setAttribute('aria-checked', String(i === settings.skin)); });
+  const rnd = settings.randomColor;
+  $('skinName').textContent = rnd ? 'Aleatorio' : SKINS[settings.skin].name;
+  $('skins').classList.toggle('dim', rnd);
+  [...$('skins').children].forEach((b, i) => { const on = !rnd && i === settings.skin; b.classList.toggle('sel', on); b.setAttribute('aria-checked', String(on)); });
+  for (const b of $('colorMode').children) { const on = (b.dataset.v === 'random') === rnd; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
   const D = DIFFS[settings.diff];
   $('diffInfo').textContent = D.bots + ' bots · ' + D.tag;
   for (const b of $('diff').children) { const on = b.dataset.v === settings.diff; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
