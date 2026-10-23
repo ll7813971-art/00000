@@ -542,7 +542,7 @@ body.touch .only-pc{display:none}
         <span>Alimenta un virus 7 veces y dispáralo</span>
       </div>
     </section>
-    <footer class="foot">AGAR NOVA · v1.1</footer>
+    <footer class="foot">AGAR NOVA · v1.2</footer>
   </div>
 </div>
 
@@ -944,6 +944,7 @@ class Player {
     this.nextEject = 0;
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
+    this.giantK = 1;                      // freno de masa para jugadores descomunales
     this.nameSprite = null;
     this.setSkin(skin);
   }
@@ -1823,8 +1824,18 @@ function update(dt) {
 
   // decaimiento de masa, límite y suavizado de radio
   const sm = Math.min(1, dt * 12);
+  // Freno suave contra el desbordamiento de masa: si las células cubren demasiada arena, o un jugador
+  // se vuelve descomunal, la pérdida de masa aumenta. En partidas normales vale 1 (no se nota).
+  let area = 0;
+  for (const c of allCells) area += c.r * c.r;
+  const crowd = 1 + 40 * Math.pow(Math.max(0, area * Math.PI / (WORLD * WORLD) - 0.45), 2);
+  for (const pl of players) {
+    let pm = 0;
+    for (const c of pl.cells) pm += c.mass;
+    pl.giantK = 1 + Math.pow(pm / 40000, 2);
+  }
   for (const c of allCells) {
-    if (c.mass > 100) c.mass -= c.mass * (0.002 + c.mass * 3.6e-7) * dt;
+    if (c.mass > 100) c.mass -= c.mass * (0.002 + c.mass * 3.6e-7) * crowd * c.owner.giantK * dt;
     if (c.mass > MAX_CELL_MASS) {
       const p = c.owner;
       if (p.cells.length < MAX_CELLS) {

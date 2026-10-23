@@ -30,8 +30,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   (para huir y para apuntar), no se meten en trampas (presas protegidas por una célula mayor), se
   dividen con más precisión y no pierden tiempo persiguiendo presas que no pueden alcanzar.
   Cada mejora se midió por separado en partidas de 200 bots (100 con IA Ultra contra 100 con IA
-  normal, misma habilidad, 4 minutos): la combinación elegida muere un ~27 % menos y casi duplica la
-  relación eliminaciones/muertes. Otras ideas (disparar virus más a menudo, escanear rutas de huida,
+  normal, misma habilidad, 4 minutos): la combinación elegida muere entre un 20 y un 27 % menos y su
+  relación eliminaciones/muertes es ~1,2-1,3 frente a ~0,8 (el reparto de masa queda igualado). Otras ideas (disparar virus más a menudo, escanear rutas de huida,
   ampliar la visión, reaccionar más rápido, ver gigantes lejanos) empeoraban el juego y se descartaron.
 - **Ataque a células divididas:** cuando un bot está dividido, cada una de sus células persigue a la
   presa más jugosa a su alcance (máximo dos por presa para no estorbarse) y valora más las piezas de
@@ -49,6 +49,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Icono** propio (`icons/`): favicon, icono de pantalla de inicio para iOS/Android y marca dentro del juego.
 - Accesibilidad: foco visible, roles ARIA, navegación con teclado y respeto a «reducir movimiento».
 - Sonido sintetizado con WebAudio y vibración en móvil.
+- Equilibrio a largo plazo: la pérdida de masa aumenta si la arena se satura o un jugador se vuelve
+  descomunal, para que las partidas largas (sobre todo en Ultra) no acaben con células cubriéndolo todo.
 - Rendimiento: sprites pre-renderizados, rejilla espacial y resolución adaptativa.
 
 ## Archivos
