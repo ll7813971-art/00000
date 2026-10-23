@@ -29,7 +29,11 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Ataque a células divididas:** cuando un bot está dividido, cada una de sus células persigue a la
   presa más jugosa a su alcance (máximo dos por presa para no estorbarse) y valora más las piezas de
   quien está dividido. La lógica es idéntica contra jugadores y bots.
-- 3 dificultades (16 / 26 / 36 bots).
+- **4 modos:** Fácil (16 bots), Normal (26), Difícil (36) y **Ultra**: mapa de 14.000 (más de 5 veces
+  el área), **200 bots**, 15.000 piezas de comida, más virus y bots con una IA mejorada
+  (ver «IA Ultra» abajo). Al elegir un modo, el fondo del menú pasa a mostrar esa partida.
+- **Reiniciar fondo:** botón del menú (o tecla `R`) que genera de nuevo la partida que se ve de fondo,
+  con el modo seleccionado.
 - **Temas negro y blanco** (también en el lienzo: arena, cuadrícula, comida y minimapa), que se recuerdan.
 - **Interfaz:** pantalla de carga, menú con vista previa de la skin, estadísticas acumuladas
   (récord, partidas, eliminados), hoja de **Ajustes** (tema, sonido y volumen, vibración, masa,

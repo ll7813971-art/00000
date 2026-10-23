@@ -164,7 +164,9 @@ svg{display:block}
 .skin.sel{transform:scale(1.1);box-shadow:inset -5px -7px 12px rgba(0,0,0,.28),inset 5px 5px 12px rgba(255,255,255,.32),0 0 0 3px var(--ring-in),0 0 0 5px var(--text),0 6px 20px rgba(139,92,246,.45)}
 
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:14px;background:var(--fill-1);border:1px solid var(--stroke)}
-.seg button{height:40px;border-radius:10px;font-weight:700;font-size:15px;color:var(--muted);transition:background .2s,color .2s,box-shadow .2s;padding:0 10px;white-space:nowrap}
+.seg button{height:40px;border-radius:10px;font-weight:700;font-size:15px;color:var(--muted);transition:background .2s,color .2s,box-shadow .2s;padding:0 10px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px}
+#diff button{padding:0 4px;font-size:14px}
+.seg button[data-v="ultra"].on{background:var(--grad-warm);box-shadow:0 6px 18px rgba(249,115,22,.4)}
 .seg button:hover:not(.on){color:var(--text)}
 .seg button.on{background:var(--grad-main);color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.35)}
 .seg-sm button{height:34px;font-size:13.5px}
@@ -183,8 +185,8 @@ svg{display:block}
 .btn-ghost:hover{background:var(--fill-2)}
 
 .tools{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
-.tool{height:56px;border-radius:14px;background:var(--fill-1);border:1px solid var(--stroke);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  font-size:11.5px;font-weight:700;color:var(--soft);letter-spacing:.02em;transition:background .2s,border-color .2s,transform .15s;padding:0 4px;white-space:nowrap}
+.tool{height:60px;border-radius:14px;background:var(--fill-1);border:1px solid var(--stroke);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:11.5px;font-weight:700;color:var(--soft);letter-spacing:.02em;transition:background .2s,border-color .2s,transform .15s;padding:0 4px;line-height:1.15;text-align:center}
 .tool svg{width:20px;height:20px}
 .tool:hover{background:var(--fill-2);border-color:var(--stroke-2)}
 .tool:active{transform:scale(.97)}
@@ -201,6 +203,9 @@ svg{display:block}
 .howto div>span{display:flex;align-items:center;gap:6px;margin:4px 0}
 .howto b{color:var(--text)}
 kbd{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;color:var(--text);background:var(--kbd-bg);border:1px solid var(--stroke-2);border-bottom-width:2px}
+#toast{position:fixed;left:50%;bottom:calc(22px + var(--sb));transform:translate(-50%,20px);z-index:60;padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:700;color:var(--toast-text);background:var(--toast-bg);border:1px solid var(--stroke-2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+body.busy .tool[data-act="restartbg"] svg{animation:spin .8s linear infinite}
 .foot{font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-align:center;opacity:.85}
 
 /* ============ Diálogos ============ */
@@ -386,6 +391,7 @@ body.touch .only-pc{display:none}
 }
 
 @keyframes flow{to{background-position:300% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{0%{left:-60%}55%,100%{left:135%}}
 @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
@@ -482,6 +488,7 @@ body.touch .only-pc{display:none}
         <button data-v="facil" role="radio">Fácil</button>
         <button data-v="normal" role="radio">Normal</button>
         <button data-v="dificil" role="radio">Difícil</button>
+        <button data-v="ultra" role="radio"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>Ultra</button>
       </div>
       <button id="playBtn" class="btn-play">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
@@ -500,6 +507,10 @@ body.touch .only-pc{display:none}
         <button class="tool" data-act="fs">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
           <span>Pantalla completa</span>
+        </button>
+        <button class="tool" data-act="restartbg" aria-label="Reiniciar la partida de fondo" title="Reiniciar la partida de fondo (R)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span>Reiniciar fondo</span>
         </button>
       </div>
     </main>
@@ -562,6 +573,7 @@ body.touch .only-pc{display:none}
   <div class="dialog glass">
     <svg class="mark mark-sm" aria-hidden="true"><use href="#logo"/></svg>
     <h2 id="pauseTitle">Pausa</h2>
+    <p class="sub" id="pMode"></p>
     <div class="dstats">
       <div><span>Masa</span><b id="pMass">0</b></div>
       <div><span>Puesto</span><b id="pRank">#–</b></div>
@@ -648,6 +660,8 @@ body.touch .only-pc{display:none}
   </div>
 </div>
 
+<div id="toast" role="status" aria-live="polite"></div>
+
 <!-- ============ CARGA ============ -->
 <div id="splash" aria-hidden="true">
   <svg class="mark"><use href="#logo"/></svg>
@@ -681,8 +695,8 @@ const vibrate = p => { try { if (settings.vibrate && inputMode === 'touch' && na
 /* =====================================================================
    CONFIGURACIÓN DEL JUEGO
    ===================================================================== */
-const WORLD = 6000;          // tamaño del mapa (cuadrado)
-const PELLETS = 2800;        // comida en el mapa
+let WORLD = 6000;            // tamaño del mapa (cuadrado); cambia según el modo
+let PELLETS = 2800;          // comida en el mapa
 const START_MASS = 12;
 const MAX_CELLS = 16;
 const MIN_SPLIT = 35;
@@ -691,8 +705,9 @@ const EJECT_MASS = 13;
 const EJECT_LOSS = 16;
 const VIRUS_MASS = 100;
 const VIRUS_FEED = 7;
-const VIRUS_MIN = 22;
-const VIRUS_MAX = 36;
+let VIRUS_MIN = 22;
+let VIRUS_MAX = 36;
+let botSpriteSize = 192;     // tamaño del sprite de los bots (menor con muchos bots)
 const EAT_RATIO = 1.25;      // hay que ser 25% más grande para comer
 const MAX_CELL_MASS = 22500;
 const BOOST_K = 5;           // amortiguación del impulso al dividirse
@@ -703,10 +718,12 @@ const speedOf = m => 520 * Math.pow(m, -0.22);
 const splitDistOf = r => 360 + r * 0.7;
 const mergeTimeOf = m => 8 + m * 0.008;
 
+// iq: 1 = bots normales, 2 = Ultra (predicen movimientos, rastrean comida, evitan trampas, usan más trucos)
 const DIFFS = {
-  facil:   { label: 'Fácil',   tag: 'relajado',    bots: 16, skill: [0.2, 0.5],  spread: 260 },
-  normal:  { label: 'Normal',  tag: 'equilibrado', bots: 26, skill: [0.45, 0.85], spread: 520 },
-  dificil: { label: 'Difícil', tag: 'agresivo',    bots: 36, skill: [0.75, 1.0],  spread: 900 }
+  facil:   { label: 'Fácil',   tag: 'relajado',    bots: 16,  skill: [0.2, 0.5],   spread: 260,  iq: 1, world: 6000,  pellets: 2800,  virusMin: 22,  virusMax: 36,  presim: 240 },
+  normal:  { label: 'Normal',  tag: 'equilibrado', bots: 26,  skill: [0.45, 0.85], spread: 520,  iq: 1, world: 6000,  pellets: 2800,  virusMin: 22,  virusMax: 36,  presim: 240 },
+  dificil: { label: 'Difícil', tag: 'agresivo',    bots: 36,  skill: [0.75, 1.0],  spread: 900,  iq: 1, world: 6000,  pellets: 2800,  virusMin: 22,  virusMax: 36,  presim: 240 },
+  ultra:   { label: 'Ultra',   tag: 'mapa enorme', bots: 200, skill: [0.93, 1.0],  spread: 1100, iq: 2, world: 14000, pellets: 15000, virusMin: 120, virusMax: 190, presim: 90 }
 };
 
 const SKINS = [
@@ -926,12 +943,13 @@ class Player {
     this.speedMul = 1;
     this.nextEject = 0;
     this.protectUntil = 0;
+    this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
     this.nameSprite = null;
     this.setSkin(skin);
   }
   setSkin(skin) {
     this.skin = skin;
-    this.sprite = makeCellSprite(skin, this.isBot ? 192 : 384);
+    this.sprite = makeCellSprite(skin, this.isBot ? botSpriteSize : 384);
     this.color = skin.rainbow ? '#c084fc' : `hsl(${skin.h1},95%,62%)`;
   }
   get mass() { let m = 0; for (const c of this.cells) m += c.mass; return m; }
@@ -967,21 +985,26 @@ const ejected = [];
 const particles = [];
 const ghosts = [];
 const floats = [];
-const cellGrid = new Grid(300);
-const ejGrid = new Grid(300);
+let cellGrid = new Grid(300);
+let ejGrid = new Grid(300);
 const qBufA = [], qBufB = [], qBufC = [], eatenBuf = [], botCT = [];
 let botStamp = 0;
 let particleCap = 420;
 const dbg = { kills: 0, botVsBot: 0, splits: 0, pops: 0, virusShots: 0 };
+// Mejoras de la IA Ultra; cada una se puede apagar por separado para medir su efecto
+const SMART = { predict: true, danger: true, guard: true, forage: true, split: true, virus: true, scan: true, catch: true, view: true, fast: true };
+const botDanger = [];
 let worldDiff = null;
 let nextVirusAt = 0;
 let namePool = [];
+let nameRound = 0;
 
 const human = new Player('Jugador', SKINS[0], false);
 const stats = { start: 0, food: 0, cells: 0, kills: 0, maxMass: 0, bestRank: 99, killer: '' };
 
 /* ---------- Comida ---------- */
-const PG = 250, PGN = Math.ceil(WORLD / PG);
+const PG = 250;
+let PGN = Math.ceil(WORLD / PG);
 const pKey = (x, y) => clamp((x / PG) | 0, 0, PGN - 1) + clamp((y / PG) | 0, 0, PGN - 1) * PGN;
 // ¿Hay una célula grande cubriendo este punto?
 function underBigCell(x, y) {
@@ -1037,16 +1060,18 @@ function spawnVirus(x, y, vx, vy) {
 
 /* ---------- Jugadores ---------- */
 function pickName() {
-  if (!namePool.length) namePool = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
-  return namePool.pop();
+  if (!namePool.length) { namePool = BOT_NAMES.slice().sort(() => Math.random() - 0.5); nameRound++; }
+  const n = namePool.pop();
+  return nameRound > 1 ? n + nameRound : n;      // con 200 bots los nombres se repiten: Nova, Nova2…
 }
 
 function createBot(D) {
   const h1 = Math.random() * 360;
   const b = new Player(pickName(), { h1, h2: (h1 + rand(25, 70)) % 360 }, true);
   b.skill = rand(D.skill[0], D.skill[1]);
-  b.aggr = rand(0.55, 1.35) * (0.6 + 0.4 * b.skill);
+  b.aggr = rand(D.iq >= 2 ? 0.9 : 0.55, D.iq >= 2 ? 1.5 : 1.35) * (0.6 + 0.4 * b.skill);
   b.caution = rand(0.85, 1.25);
+  b.iq = D.iq || 1;
   b.maxSplit = b.skill > 0.85 ? 4 : b.skill > 0.55 ? 2 : 1;
   b.nextThink = 0; b.nextSplit = 0; b.nextShot = 0; b.shoot = null;
   b.wx = 0; b.wy = 0; b.wanderUntil = 0; b.respawnAt = 0;
@@ -1085,6 +1110,11 @@ function spawnPlayer(p, mass) {
 function initWorld(key) {
   worldDiff = key;
   const D = DIFFS[key];
+  WORLD = D.world; PELLETS = D.pellets; VIRUS_MIN = D.virusMin; VIRUS_MAX = D.virusMax;
+  PGN = Math.ceil(WORLD / PG);
+  cellGrid = new Grid(300); ejGrid = new Grid(300);
+  botSpriteSize = D.bots > 100 ? 144 : 192;
+  nameRound = 0;
   players.length = 0; allCells.length = 0;
   ejected.length = 0; viruses.length = 0;
   particles.length = 0; ghosts.length = 0; floats.length = 0;
@@ -1099,6 +1129,42 @@ function initWorld(key) {
     spawnPlayer(b, START_MASS + Math.pow(Math.random(), 2.4) * D.spread);
   }
   spectate = null;
+}
+
+// Crea el mundo del modo elegido y lo pre-simula unos segundos para que el fondo ya esté vivo
+function buildWorld(key) {
+  initWorld(key);
+  for (let i = 0; i < DIFFS[key].presim; i++) update(STEP);
+  spectate = leader();
+  if (spectate) {
+    const c = centroid(spectate);
+    cam.s = viewScale(c.sr) * 0.78;
+    const hw = vw / 2 / cam.s, hh = vh / 2 / cam.s;
+    cam.x = clamp(c.x, Math.min(hw, WORLD / 2), Math.max(WORLD - hw, WORLD / 2));
+    cam.y = clamp(c.y, Math.min(hh, WORLD / 2), Math.max(WORLD - hh, WORLD / 2));
+  }
+}
+
+let rebuilding = false, toastT = 0;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2300);
+}
+// Reinicia la partida de fondo del menú (con el modo seleccionado)
+function restartBackground(msg) {
+  if (state !== 'menu' || rebuilding) return;
+  rebuilding = true;
+  document.body.classList.add('busy');
+  requestAnimationFrame(() => setTimeout(() => {      // deja pintar el aviso antes de trabajar
+    buildWorld(settings.diff);
+    document.body.classList.remove('busy');
+    rebuilding = false;
+    const D = DIFFS[settings.diff];
+    toast(msg || `Fondo reiniciado · ${D.label} · ${D.bots} bots`);
+  }, 30));
 }
 
 function rebuildCells() {
@@ -1228,6 +1294,7 @@ function eatCell(a, b) {
 function killPlayer(v, k, lastMass) {
   v.alive = false;
   dbg.kills++;
+  v.deaths++; if (k) k.kills++;
   if (v.isBot && k.isBot) dbg.botVsBot++;
   v.shoot = null;
   if (v === human || k === human || lastMass >= 140) addFeed(k, v);
@@ -1245,21 +1312,80 @@ function preyBonus(e) {
   return (e.owner.cells.length > 1 ? 1.4 : 1) * (e.mergeAt > now ? 1.15 : 1);
 }
 
+// ¿Hay una célula mayor que yo protegiendo a esta presa? (trampa)
+function isGuarded(prey, c, list, owner) {
+  for (let i = 0; i < list.length; i++) {
+    const g = list[i];
+    if (g === prey || g.owner === owner || g.dead || g.mass < c.mass * EAT_RATIO) continue;
+    if (Math.hypot(g.x - prey.x, g.y - prey.y) < g.r + c.r + 110) return true;
+  }
+  return false;
+}
+
+// Ultra: en vez de vagar al azar, elige el sitio con más comida entre varios candidatos
+function foragePoint(mx, my) {
+  let bx = WORLD / 2, by = WORLD / 2, bs = -Infinity;
+  for (let i = 0; i < 8; i++) {
+    const x = clamp(i < 5 ? mx + rand(-2200, 2200) : rand(400, WORLD - 400), 400, WORLD - 400);
+    const y = clamp(i < 5 ? my + rand(-2200, 2200) : rand(400, WORLD - 400), 400, WORLD - 400);
+    const gx = clamp((x / PG) | 0, 1, PGN - 2), gy = clamp((y / PG) | 0, 1, PGN - 2);
+    let sc = 0;
+    for (let yy = gy - 1; yy <= gy + 1; yy++) {
+      for (let xx = gx - 1; xx <= gx + 1; xx++) {
+        const bk = pelletBuckets[xx + yy * PGN];
+        for (let k = 0; k < bk.length; k++) sc += bk[k].m;
+      }
+    }
+    sc -= Math.hypot(x - mx, y - my) / 500;
+    if (sc > bs) { bs = sc; bx = x; by = y; }
+  }
+  return [bx, by];
+}
+
+// Ultra: elige la dirección de huida más segura probando 16 rumbos. Mira dónde estarán los rivales
+// grandes (por su velocidad), las paredes, y evita huir hacia otra amenaza.
+function scanEscape(big, list, caution, awayX, awayY) {
+  const L = 340 + big.r * 1.2, m = 140 + big.r;
+  const al = Math.hypot(awayX, awayY) || 1;
+  let bx = awayX / al, by = awayY / al, bestR = Infinity;
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * TAU, ux = Math.cos(a), uy = Math.sin(a);
+    let risk = 0;
+    for (let step = 1; step <= 2; step++) {
+      const px = big.x + ux * L * step * 0.5, py = big.y + uy * L * step * 0.5;
+      for (let i = 0; i < list.length; i++) {
+        const e = list[i];
+        const ex = e.x + e.mvx * 0.5 * step, ey = e.y + e.mvy * 0.5 * step;
+        const d = Math.hypot(px - ex, py - ey) - e.r - big.r;
+        const R = (150 + e.r * 0.5) * caution + (e.mass * 0.5 >= big.mass * EAT_RATIO ? 220 : 0);
+        if (d < R) { const t = 1 - Math.max(0, d) / R; risk += t * t * (1 + Math.min(2, (e.mass / big.mass) * 0.25)); }
+      }
+      if (px < m) risk += ((m - px) / m) * 1.4; else if (px > WORLD - m) risk += ((px - (WORLD - m)) / m) * 1.4;
+      if (py < m) risk += ((m - py) / m) * 1.4; else if (py > WORLD - m) risk += ((py - (WORLD - m)) / m) * 1.4;
+    }
+    risk -= 0.12 * (ux * awayX + uy * awayY) / al;       // desempata a favor de alejarse del peligro
+    if (risk < bestR) { bestR = risk; bx = ux; by = uy; }
+  }
+  return [bx, by];
+}
+
 function botThink(b) {
   const cells = b.cells, n = cells.length;
-  b.nextThink = now + (0.06 + (1 - b.skill) * 0.2) * rand(0.8, 1.25);
+  const smart = b.iq >= 2;                // modo Ultra
+  b.nextThink = now + (smart && SMART.fast ? 0.04 : 0.06 + (1 - b.skill) * 0.2) * rand(0.8, 1.25);
 
   let mx = 0, my = 0, tm = 0, sr = 0, big = cells[0];
   for (const c of cells) { mx += c.x * c.mass; my += c.y * c.mass; tm += c.mass; sr += c.r; if (c.mass > big.mass) big = c; }
   mx /= tm; my /= tm;
 
-  const view = 650 * Math.pow(Math.max(1, sr / 36), 0.42) + big.r;
+  const view = (650 * Math.pow(Math.max(1, sr / 36), 0.42) + big.r) * (smart && SMART.view ? 1.35 : 1);
   const caution = b.caution * (0.75 + 0.35 * b.skill);
-  let fx = 0, fy = 0, threat = 0, threatCell = null;
-  let prey = null, preyScore = 0;
+  let fx = 0, fy = 0, threat = 0, threatCell = null, tfx = 0, tfy = 0;
+  let prey = null, preyScore = 0, prey2 = null, prey2Score = 0;
   const ct = botCT;                       // amenaza que sufre cada célula propia
   ct.length = n;
   for (let j = 0; j < n; j++) ct[j] = 0;
+  botDanger.length = 0;
 
   cellGrid.query(mx, my, view, qBufA);
   for (let i = 0; i < qBufA.length; i++) {
@@ -1272,18 +1398,33 @@ function botThink(b) {
       if (e.mass < c.mass * EAT_RATIO) continue;
       const dx = c.x - e.x, dy = c.y - e.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      let dEff = d;
+      if (smart && SMART.predict) {        // Ultra: anticipa hacia dónde se mueve el rival
+        const px = dx - e.mvx * 0.45, py = dy - e.mvy * 0.45;
+        dEff = Math.min(d, Math.sqrt(px * px + py * py) || 1);
+      }
       let range = e.r + c.r + 90 + e.r * 0.25;
       if (e.mass * 0.5 >= c.mass * EAT_RATIO && e.mass >= MIN_SPLIT && e.owner.cells.length < MAX_CELLS) {
         const hr = radiusOf(e.mass * 0.5);
         range = Math.max(range, e.r * 0.5 + splitDistOf(hr) + hr + c.r * 0.3);
       }
       range *= caution;
-      const t = 1 - d / range;
+      const t = 1 - dEff / range;
       if (t > 0) {
         const w = (t * t * 7 + t * 1.5) * (0.35 + c.mass / tm);
-        fx += (dx / d) * w; fy += (dy / d) * w;
+        tfx += (dx / d) * w; tfy += (dy / d) * w;
         if (t > threat) { threat = t; threatCell = e; }
         if (t > ct[j]) ct[j] = t;
+      }
+    }
+
+    // --- Ultra: rehúye las zonas con rivales grandes aunque todavía no sean una amenaza inmediata
+    if (smart && e.mass >= big.mass * EAT_RATIO) botDanger.push(e);
+    if (smart && SMART.danger && e.mass >= big.mass * EAT_RATIO) {
+      const ddx = big.x - e.x, ddy = big.y - e.y, dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+      if (dd < view) {
+        const k = 1 - dd / view, w = 0.4 * Math.min(2.5, e.mass / (big.mass * EAT_RATIO)) * k * k;
+        fx += (ddx / dd) * w; fy += (ddy / dd) * w;
       }
     }
 
@@ -1291,10 +1432,25 @@ function botThink(b) {
     if (big.mass >= e.mass * EAT_RATIO && e.owner.protectUntil <= now) {
       const dx = e.x - big.x, dy = e.y - big.y;
       const d = Math.sqrt(dx * dx + dy * dy);
-      const sc = preyBonus(e) * (e.mass + 8) / (Math.max(0, d - big.r) + 140);
-      if (sc > preyScore) { preyScore = sc; prey = e; }
+      let sc = preyBonus(e) * (e.mass + 8) / (Math.max(0, d - big.r) + 140);
+      if (smart && SMART.catch && d > big.r * 2 + 220) {   // Ultra: no persigue lo que no puede alcanzar
+        const away = (e.mvx * dx + e.mvy * dy) / (d || 1);   // velocidad con la que la presa se aleja
+        const cornered = e.x < 260 || e.x > WORLD - 260 || e.y < 260 || e.y > WORLD - 260;
+        if (speedOf(big.mass) - away < 30 && !cornered) sc *= 0.12;
+      }
+      if (sc > preyScore) { prey2 = prey; prey2Score = preyScore; preyScore = sc; prey = e; }
+      else if (sc > prey2Score) { prey2Score = sc; prey2 = e; }
     }
   }
+  // Ultra: no se mete en trampas; si la mejor presa está protegida prueba con la segunda
+  if (smart && SMART.guard && prey && isGuarded(prey, big, qBufA, b)) prey = prey2 && !isGuarded(prey2, big, qBufA, b) ? prey2 : null;
+
+  // --- Huida: suma de repulsiones o, en Ultra, el rumbo más seguro de un escaneo de 16 direcciones
+  if (smart && SMART.scan && threat > 0.2) {
+    const mag = clamp(Math.hypot(tfx, tfy), 2, 7);
+    const dir = scanEscape(big, botDanger, caution, tfx, tfy);
+    fx += dir[0] * mag; fy += dir[1] * mag;
+  } else { fx += tfx; fy += tfy; }
 
   // --- Comida (bolitas + masa expulsada)
   let gx = 0, gy = 0;
@@ -1325,7 +1481,7 @@ function botThink(b) {
 
   // --- Persecución
   if (prey) {
-    const lead = 0.15;
+    const lead = smart && SMART.predict ? 0.22 + Math.min(0.28, Math.hypot(prey.x - big.x, prey.y - big.y) / 2600) : 0.15;
     const px = prey.x + prey.mvx * lead, py = prey.y + prey.mvy * lead;
     const dx = px - big.x, dy = py - big.y, d = Math.hypot(dx, dy) || 1;
     const value = Math.min(1, prey.mass / (big.mass * 0.15) + 0.2 + (prey.owner.cells.length > 1 ? 0.25 : 0));
@@ -1368,7 +1524,8 @@ function botThink(b) {
   // --- Explorar si no hay nada interesante
   if (fx * fx + fy * fy < 0.0004) {
     if (!b.wx || Math.hypot(b.wx - mx, b.wy - my) < 250 || now > b.wanderUntil) {
-      b.wx = rand(400, WORLD - 400); b.wy = rand(400, WORLD - 400); b.wanderUntil = now + rand(6, 14);
+      if (smart && SMART.forage) { const fp = foragePoint(mx, my); b.wx = fp[0]; b.wy = fp[1]; b.wanderUntil = now + rand(4, 9); }
+      else { b.wx = rand(400, WORLD - 400); b.wy = rand(400, WORLD - 400); b.wanderUntil = now + rand(6, 14); }
     }
     fx = b.wx - mx; fy = b.wy - my;
   }
@@ -1400,13 +1557,7 @@ function botThink(b) {
         if (sc > bs) { bs = sc; best = e; }
       }
       if (!best) continue;
-      let guarded = false;                           // no caer en la trampa: una célula mayor protege a la presa
-      for (let i = 0; i < qBufA.length; i++) {
-        const g = qBufA[i];
-        if (g === best || g.owner === b || g.dead || g.mass < c.mass * EAT_RATIO) continue;
-        if (Math.hypot(g.x - best.x, g.y - best.y) < g.r + c.r + 110) { guarded = true; break; }
-      }
-      if (guarded) continue;
+      if (isGuarded(best, c, qBufA, b)) continue;    // no caer en la trampa: una célula mayor protege a la presa
       if (best.claimStamp !== stamp) { best.claimStamp = stamp; best.claims = 0; }
       best.claims++;
       const lead = 0.14 + Math.min(0.2, Math.hypot(best.x - c.x, best.y - c.y) / 3500);
@@ -1417,13 +1568,13 @@ function botThink(b) {
   }
 
   // --- Ataque dividiéndose
-  if (prey && threat < 0.2 && now >= b.nextSplit && n <= b.maxSplit && big.mass >= MIN_SPLIT * 1.1) {
+  if (prey && threat < 0.2 && now >= b.nextSplit && n <= (smart && SMART.split ? 6 : b.maxSplit) && big.mass >= MIN_SPLIT * 1.1) {
     const half = big.mass / 2;
     if (half >= prey.mass * 1.3 && prey.mass >= Math.max(8, big.mass * 0.035)) {
       const hr = radiusOf(half);
       const dx = prey.x - big.x, dy = prey.y - big.y, d = Math.hypot(dx, dy);
       const reachS = hr * 0.9 + splitDistOf(hr) * 0.9;
-      if (d > big.r * 0.6 && d < reachS && Math.random() < 0.3 + b.skill * 0.6) {
+      if (d > big.r * 0.6 && d < reachS && Math.random() < (smart && SMART.split ? 0.92 : 0.3 + b.skill * 0.6)) {
         let risky = false;
         for (const e of qBufA) {
           if (e === prey || e.owner === b || e.dead) continue;
@@ -1433,27 +1584,27 @@ function botThink(b) {
           const lead = 0.25 + d / 3000;
           b.tx = prey.x + prey.mvx * lead; b.ty = prey.y + prey.mvy * lead;
           splitPlayer(b);
-          b.nextSplit = now + rand(0.8, 2.5) + (1 - b.skill) * 2;
+          b.nextSplit = smart && SMART.split ? now + rand(0.6, 1.6) : now + rand(0.8, 2.5) + (1 - b.skill) * 2;
         }
       }
     }
   }
 
   // --- Truco avanzado: disparar un virus contra un rival grande
-  if (b.skill > 0.7 && !b.shoot && threat < 0.5 && now >= b.nextShot && big.mass > 200) {
+  if (b.skill > 0.7 && !b.shoot && threat < 0.5 && now >= b.nextShot && big.mass > (smart && SMART.virus ? 120 : 200)) {
     outer:
     for (const v of viruses) {
       const vx = v.x - big.x, vy = v.y - big.y, dv = Math.hypot(vx, vy);
       if (dv < big.r + v.r + 20 || dv > big.r + 450) continue;
       const ux = vx / dv, uy = vy / dv;
       for (const e of qBufA) {
-        if (e.owner === b || e.dead || e.mass < 400 || e.mass < big.mass * 0.9) continue;
+        if (e.owner === b || e.dead || e.mass < (smart && SMART.virus ? 250 : 400) || e.mass < big.mass * 0.9) continue;
         const ex = e.x - v.x, ey = e.y - v.y, de = Math.hypot(ex, ey);
         if (de < v.r || de > 750) continue;
         if ((ux * ex + uy * ey) / de > 0.95) {
           b.shoot = { v, until: now + 1.4 };
           dbg.virusShots++;
-          b.nextShot = now + rand(8, 16);
+          b.nextShot = now + (smart && SMART.virus ? rand(4, 9) : rand(8, 16));
           break outer;
         }
       }
@@ -1880,13 +2031,14 @@ function render() {
   ctx.lineWidth = 34 / s; ctx.strokeStyle = theme.edge; ctx.strokeRect(0, 0, WORLD, WORLD);
   ctx.lineWidth = 4 / s; ctx.strokeStyle = theme.edgeLine; ctx.strokeRect(0, 0, WORLD, WORLD);
 
-  // comida
+  // comida (con el mapa muy alejado se dibuja solo una parte)
+  const pelletStride = s < 0.1 ? 3 : s < 0.2 ? 2 : 1;
   const bx0 = clamp(((L - 20) / PG) | 0, 0, PGN - 1), bx1 = clamp(((R + 20) / PG) | 0, 0, PGN - 1);
   const by0 = clamp(((T - 20) / PG) | 0, 0, PGN - 1), by1 = clamp(((B + 20) / PG) | 0, 0, PGN - 1);
   for (let by = by0; by <= by1; by++) {
     for (let bx = bx0; bx <= bx1; bx++) {
       const b = pelletBuckets[bx + by * PGN];
-      for (let i = 0; i < b.length; i++) {
+      for (let i = 0; i < b.length; i += pelletStride) {
         const p = b[i];
         const age = now - p.born;
         const sc = age < 0.3 ? Math.max(0, age / 0.3) : 1;
@@ -2113,7 +2265,7 @@ function startGame() {
   Sound.init();
   settings.name = $('nick').value.trim().slice(0, 15);
   store.set('name', settings.name);
-  if (worldDiff !== settings.diff) initWorld(settings.diff);
+  if (worldDiff !== settings.diff) buildWorld(settings.diff);
   human.name = settings.name || 'Jugador';
   human.nameSprite = null;
   human.setSkin(SKINS[settings.skin]);
@@ -2189,6 +2341,8 @@ function pauseGame() {
   $('pMass').textContent = fmt(human.mass);
   $('pRank').textContent = r >= 0 ? '#' + (r + 1) : '#–';
   $('pTime').textContent = fmtTime(now - stats.start);
+  const PD = DIFFS[worldDiff];
+  $('pMode').textContent = `Modo ${PD.label} · ${PD.bots} bots`;
   syncUI();
   showScreen('pause');
 }
@@ -2318,6 +2472,8 @@ window.addEventListener('keydown', e => {
     setSetting('sound', !settings.sound);
   } else if (k === 't' || k === 'T') {
     applyTheme(settings.theme === 'dark' ? 'light' : 'dark');
+  } else if ((k === 'r' || k === 'R') && state === 'menu') {
+    restartBackground();
   }
   if (inputMode !== 'mouse' && state === 'playing' && (k === ' ' || k === 'w' || k === 'W')) setInputMode('mouse');
 });
@@ -2417,7 +2573,11 @@ function buildUI() {
 
   // dificultad
   for (const b of $('diff').children) {
-    b.addEventListener('click', () => { settings.diff = b.dataset.v; store.set('diff', settings.diff); syncUI(); Sound.init(); Sound.click(); });
+    b.addEventListener('click', () => {
+      const changed = settings.diff !== b.dataset.v;
+      settings.diff = b.dataset.v; store.set('diff', settings.diff); syncUI(); Sound.init(); Sound.click();
+      if (changed) { const D = DIFFS[settings.diff]; restartBackground(`Modo ${D.label} · ${D.bots} bots`); }   // el fondo muestra lo que vas a jugar
+    });
   }
 
   // interruptores, segmentos y volumen de la hoja de ajustes
@@ -2447,6 +2607,7 @@ function buildUI() {
       if (act === 'settings') openSettings();
       else if (act === 'theme') applyTheme(settings.theme === 'dark' ? 'light' : 'dark');
       else if (act === 'fs') toggleFullscreen();
+      else if (act === 'restartbg') restartBackground();
     });
   }
   document.addEventListener('fullscreenchange', () => setTimeout(resize, 100));
@@ -2528,16 +2689,7 @@ applyTheme(settings.theme, false);
 document.body.classList.toggle('show-fps', settings.fps);
 buildUI();
 applyQuality();            // fija la resolución y llama a resize()
-initWorld(settings.diff);
-// pre-simula unos segundos para que el mundo de fondo ya esté vivo
-for (let i = 0; i < 240; i++) update(STEP);
-spectate = leader();
-if (spectate) {
-  const c = centroid(spectate);
-  cam.s = viewScale(c.sr) * 0.78;
-  const hw = vw / 2 / cam.s, hh = vh / 2 / cam.s;
-  cam.x = clamp(c.x, Math.min(hw, WORLD / 2), Math.max(WORLD - hw, WORLD / 2)); cam.y = clamp(c.y, Math.min(hh, WORLD / 2), Math.max(WORLD - hh, WORLD / 2));
-}
+buildWorld(settings.diff);
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => { for (const p of players) p.nameSprite = null; human.nameSprite = null; });
 }
@@ -2558,7 +2710,7 @@ setTimeout(hideSplash, 3000);
 window.AgarNova = {
   get state() { return state; }, players, human, stats, viruses, pellets, dbg, settings,
   get now() { return now; },
-  think: botThink,
+  think: botThink, SMART,
   spawnCell(p, x, y, mass) { const c = new Cell(p, x, y, mass); p.cells.push(c); p.alive = true; return c; },
   simulate(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n; i++) update(STEP); }
 };
