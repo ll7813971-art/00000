@@ -1839,9 +1839,8 @@ function updateJoy(x, y) {
   const j = input.joy;
   let dx = x - j.ox, dy = y - j.oy;
   let d = Math.hypot(dx, dy);
-  if (d > JOY_R) {               // la base sigue al dedo
-    j.ox += (dx / d) * (d - JOY_R); j.oy += (dy / d) * (d - JOY_R);
-    dx = x - j.ox; dy = y - j.oy; d = JOY_R;
+  if (d > JOY_R) {               // la base queda fija; solo el botón se limita al borde
+    dx = (dx / d) * JOY_R; dy = (dy / d) * JOY_R; d = JOY_R;
   }
   j.mag = d / JOY_R;
   if (d > 0.5) { j.dx = dx / d; j.dy = dy / d; }
