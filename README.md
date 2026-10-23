@@ -26,12 +26,19 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   de división del rival), persiguen presas anticipando su movimiento, atacan dividiéndose, se esconden
   en virus cuando son pequeños, evitan virus cuando son grandes y los más hábiles disparan virus contra
   rivales grandes. Crecen, se atacan entre ellos y reaparecen.
+- **IA Ultra:** además de la IA normal, los bots Ultra anticipan hacia dónde se mueven los rivales
+  (para huir y para apuntar), no se meten en trampas (presas protegidas por una célula mayor), se
+  dividen con más precisión y no pierden tiempo persiguiendo presas que no pueden alcanzar.
+  Cada mejora se midió por separado en partidas de 200 bots (100 con IA Ultra contra 100 con IA
+  normal, misma habilidad, 4 minutos): la combinación elegida muere un ~27 % menos y casi duplica la
+  relación eliminaciones/muertes. Otras ideas (disparar virus más a menudo, escanear rutas de huida,
+  ampliar la visión, reaccionar más rápido, ver gigantes lejanos) empeoraban el juego y se descartaron.
 - **Ataque a células divididas:** cuando un bot está dividido, cada una de sus células persigue a la
   presa más jugosa a su alcance (máximo dos por presa para no estorbarse) y valora más las piezas de
   quien está dividido. La lógica es idéntica contra jugadores y bots.
 - **4 modos:** Fácil (16 bots), Normal (26), Difícil (36) y **Ultra**: mapa de 14.000 (más de 5 veces
   el área), **200 bots**, 15.000 piezas de comida, más virus y bots con una IA mejorada
-  (ver «IA Ultra» abajo). Al elegir un modo, el fondo del menú pasa a mostrar esa partida.
+  (ver «IA Ultra» más arriba). Al elegir un modo, el fondo del menú pasa a mostrar esa partida.
 - **Reiniciar fondo:** botón del menú (o tecla `R`) que genera de nuevo la partida que se ve de fondo,
   con el modo seleccionado.
 - **Temas negro y blanco** (también en el lienzo: arena, cuadrícula, comida y minimapa), que se recuerdan.
