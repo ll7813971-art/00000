@@ -992,8 +992,8 @@ let botStamp = 0;
 let particleCap = 420;
 const dbg = { kills: 0, botVsBot: 0, splits: 0, pops: 0, virusShots: 0 };
 // Mejoras de la IA Ultra; cada una se puede apagar por separado para medir su efecto
-// Activas las que han demostrado ser neutras o mejores en las pruebas; las demás se activarán cuando se midan bien.
-const SMART = { predict: true, danger: true, guard: true, forage: true, split: true, virus: false, scan: false, catch: false, view: false, fast: false };
+// Activas solo las que han demostrado mejorar a los bots normales en las pruebas A/B (menos muertes, mejor K/D).
+const SMART = { predict: true, danger: false, guard: true, forage: false, split: true, virus: false, scan: false, catch: true, view: false, fast: false };
 const botDanger = [];
 let worldDiff = null;
 let nextVirusAt = 0;
