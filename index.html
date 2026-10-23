@@ -1308,12 +1308,6 @@ function killPlayer(v, k, lastMass) {
 /* =====================================================================
    INTELIGENCIA ARTIFICIAL DE LOS BOTS
    ===================================================================== */
-// Valor táctico de una presa. Es el mismo para jugadores y bots: las piezas de alguien que está
-// dividido valen más (su masa está repartida y todavía no pueden fusionarse).
-function preyBonus(e) {
-  return (e.owner.cells.length > 1 ? 1.4 : 1) * (e.mergeAt > now ? 1.15 : 1);
-}
-
 // ¿Hay una célula mayor que yo protegiendo a esta presa? (trampa)
 function isGuarded(prey, c, list, owner) {
   for (let i = 0; i < list.length; i++) {
@@ -1430,11 +1424,11 @@ function botThink(b) {
       }
     }
 
-    // --- Presas: ¿me lo puedo comer?
+    // --- Presas: cada célula rival cuenta como un bot independiente, sea de un bot, del jugador o una pieza suelta
     if (big.mass >= e.mass * EAT_RATIO && e.owner.protectUntil <= now) {
       const dx = e.x - big.x, dy = e.y - big.y;
       const d = Math.sqrt(dx * dx + dy * dy);
-      let sc = preyBonus(e) * (e.mass + 8) / (Math.max(0, d - big.r) + 140);
+      let sc = (e.mass + 8) / (Math.max(0, d - big.r) + 140);
       if (smart && SMART.catch && d > big.r * 2 + 220) {   // Ultra: no persigue lo que no puede alcanzar
         const away = (e.mvx * dx + e.mvy * dy) / (d || 1);   // velocidad con la que la presa se aleja
         const cornered = e.x < 260 || e.x > WORLD - 260 || e.y < 260 || e.y > WORLD - 260;
@@ -1486,7 +1480,7 @@ function botThink(b) {
     const lead = smart && SMART.predict ? 0.22 + Math.min(0.28, Math.hypot(prey.x - big.x, prey.y - big.y) / 2600) : 0.15;
     const px = prey.x + prey.mvx * lead, py = prey.y + prey.mvy * lead;
     const dx = px - big.x, dy = py - big.y, d = Math.hypot(dx, dy) || 1;
-    const value = Math.min(1, prey.mass / (big.mass * 0.15) + 0.2 + (prey.owner.cells.length > 1 ? 0.25 : 0));
+    const value = Math.min(1, prey.mass / (big.mass * 0.15) + 0.2);
     const w = (0.9 + 2.3 * b.aggr * value) * (1 - threat * 0.8);
     fx += (dx / d) * w; fy += (dy / d) * w;
   }
@@ -1555,7 +1549,7 @@ function botThink(b) {
         if (e.claimStamp === stamp && e.claims >= 2) continue;
         const dx = e.x - c.x, dy = e.y - c.y, d = Math.sqrt(dx * dx + dy * dy);
         if (d > reachC) continue;
-        const sc = preyBonus(e) * (e.mass + 8) / (Math.max(0, d - c.r) + 90);
+        const sc = (e.mass + 8) / (Math.max(0, d - c.r) + 90);
         if (sc > bs) { bs = sc; best = e; }
       }
       if (!best) continue;
@@ -1688,9 +1682,13 @@ function moveCells(p, dt) {
   }
   const idt = 1 / dt;
   for (let i = 0; i < n; i++) {
-    const c = cells[i], m = c.r * 0.35;
-    if (c.x < m) { c.x = m; c.vx = 0; } else if (c.x > WORLD - m) { c.x = WORLD - m; c.vx = 0; }
-    if (c.y < m) { c.y = m; c.vy = 0; } else if (c.y > WORLD - m) { c.y = WORLD - m; c.vy = 0; }
+    // Muros: la célula entera se queda dentro de la arena. Si crece pegada al muro se desplaza hacia
+    // dentro poco a poco (no de golpe); si llega a él se detiene.
+    const c = cells[i], m = Math.min(c.r, WORLD / 2 - 1);
+    if (c.x < m) { c.x = c.px >= m ? m : Math.min(m, c.x + 700 * dt); c.vx = Math.max(c.vx, 0); }
+    else if (c.x > WORLD - m) { c.x = c.px <= WORLD - m ? WORLD - m : Math.max(WORLD - m, c.x - 700 * dt); c.vx = Math.min(c.vx, 0); }
+    if (c.y < m) { c.y = c.py >= m ? m : Math.min(m, c.y + 700 * dt); c.vy = Math.max(c.vy, 0); }
+    else if (c.y > WORLD - m) { c.y = c.py <= WORLD - m ? WORLD - m : Math.max(WORLD - m, c.y - 700 * dt); c.vy = Math.min(c.vy, 0); }
     c.mvx += ((c.x - c.px) * idt - c.mvx) * 0.25;
     c.mvy += ((c.y - c.py) * idt - c.mvy) * 0.25;
   }
@@ -1702,8 +1700,9 @@ function moveFree(list, dt, k) {
     if (e.vx === 0 && e.vy === 0) continue;
     e.x += e.vx * dt; e.y += e.vy * dt;
     e.vx *= damp; e.vy *= damp;
-    if (e.x < 0) { e.x = 0; e.vx = -e.vx; } else if (e.x > WORLD) { e.x = WORLD; e.vx = -e.vx; }
-    if (e.y < 0) { e.y = 0; e.vy = -e.vy; } else if (e.y > WORLD) { e.y = WORLD; e.vy = -e.vy; }
+    const m = e.r || 0;
+    if (e.x < m) { e.x = m; e.vx = Math.abs(e.vx); } else if (e.x > WORLD - m) { e.x = WORLD - m; e.vx = -Math.abs(e.vx); }
+    if (e.y < m) { e.y = m; e.vy = Math.abs(e.vy); } else if (e.y > WORLD - m) { e.y = WORLD - m; e.vy = -Math.abs(e.vy); }
     if (Math.abs(e.vx) < 2 && Math.abs(e.vy) < 2) { e.vx = 0; e.vy = 0; }
   }
 }

@@ -33,9 +33,10 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   normal, misma habilidad, 4 minutos): la combinación elegida muere entre un 20 y un 27 % menos y su
   relación eliminaciones/muertes es ~1,2-1,3 frente a ~0,8 (el reparto de masa queda igualado). Otras ideas (disparar virus más a menudo, escanear rutas de huida,
   ampliar la visión, reaccionar más rápido, ver gigantes lejanos) empeoraban el juego y se descartaron.
-- **Ataque a células divididas:** cuando un bot está dividido, cada una de sus células persigue a la
-  presa más jugosa a su alcance (máximo dos por presa para no estorbarse) y valora más las piezas de
-  quien está dividido. La lógica es idéntica contra jugadores y bots.
+- **Cada pieza es un bot independiente:** para los demás bots, cada célula suelta (de un bot, del jugador
+  o tras explotar con un virus) es un objetivo por sí misma, valorado solo por su masa y su distancia.
+  Cuando un bot está dividido, cada una de sus células persigue a la presa más jugosa a su alcance
+  (máximo dos por presa para no estorbarse). La lógica es idéntica contra jugadores y bots.
 - **4 modos:** Fácil (16 bots), Normal (26), Difícil (36) y **Ultra**: mapa de 14.000 (más de 5 veces
   el área), **200 bots**, 15.000 piezas de comida, más virus y bots con una IA mejorada
   (ver «IA Ultra» más arriba). Al elegir un modo, el fondo del menú pasa a mostrar esa partida.
@@ -51,6 +52,10 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - Sonido sintetizado con WebAudio y vibración en móvil.
 - Equilibrio a largo plazo: la pérdida de masa aumenta si la arena se satura o un jugador se vuelve
   descomunal, para que las partidas largas (sobre todo en Ultra) no acaben con células cubriéndolo todo.
+- **Colisiones:** las células grandes ya no atraviesan los muros (antes podían quedar casi a medias fuera
+  de la arena); si crecen pegadas a un muro se desplazan hacia dentro con suavidad. Las piezas propias se
+  empujan entre sí sin hundirse unas en otras ni temblar, también contra un muro, y los virus y la masa
+  expulsada rebotan con su borde.
 - Rendimiento: sprites pre-renderizados, rejilla espacial y resolución adaptativa.
 
 ## Archivos
