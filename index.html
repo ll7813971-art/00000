@@ -992,7 +992,8 @@ let botStamp = 0;
 let particleCap = 420;
 const dbg = { kills: 0, botVsBot: 0, splits: 0, pops: 0, virusShots: 0 };
 // Mejoras de la IA Ultra; cada una se puede apagar por separado para medir su efecto
-const SMART = { predict: true, danger: true, guard: true, forage: true, split: true, virus: true, scan: true, catch: true, view: true, fast: true };
+// Activas las que han demostrado ser neutras o mejores en las pruebas; las demás se activarán cuando se midan bien.
+const SMART = { predict: true, danger: true, guard: true, forage: true, split: true, virus: false, scan: false, catch: false, view: false, fast: false };
 const botDanger = [];
 let worldDiff = null;
 let nextVirusAt = 0;
@@ -2710,6 +2711,7 @@ setTimeout(hideSplash, 3000);
 window.AgarNova = {
   get state() { return state; }, players, human, stats, viruses, pellets, dbg, settings,
   get now() { return now; },
+  get world() { return WORLD; },
   think: botThink, SMART,
   spawnCell(p, x, y, mass) { const c = new Cell(p, x, y, mass); p.cells.push(c); p.alive = true; return c; },
   simulate(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n; i++) update(STEP); }
