@@ -2,7 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#000000" />
 <meta name="color-scheme" content="dark light" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -151,7 +151,7 @@ svg{display:block}
 .field svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.6;pointer-events:none}
 .field input{
   width:100%;height:56px;border-radius:16px;border:1px solid var(--stroke-2);background:var(--fill-1);
-  color:var(--text);font-size:18px;font-weight:600;padding:0 14px 0 46px;outline:none;transition:box-shadow .2s,background .2s,border-color .2s;
+  color:var(--text);font-size:18px;font-weight:600;padding:0 14px 0 46px;-webkit-text-size-adjust:100%;outline:none;transition:box-shadow .2s,background .2s,border-color .2s;
 }
 .field input::placeholder{color:var(--muted);opacity:.75}
 .field input:focus{border-color:transparent;background:var(--fill-2);box-shadow:0 0 0 2px var(--g2),0 0 24px rgba(139,92,246,.28)}
@@ -383,7 +383,7 @@ body.touch .only-pc{display:none}
   #colorMode{padding:3px}
   .card{padding:12px;gap:8px}
   .avatar{width:42px;height:42px}
-  .field input{height:42px;font-size:15px}
+  .field input{height:42px;font-size:16px}
   .label{font-size:10px}
   .skin{max-width:28px}
   .seg button{height:32px;font-size:13.5px}
@@ -506,7 +506,7 @@ body.touch .only-pc{display:none}
         <canvas id="avatar" class="avatar" width="112" height="112" aria-hidden="true"></canvas>
         <label class="field">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
-          <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
+          <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" inputmode="text" autocomplete="nickname" autocapitalize="words" enterkeyhint="done" />
         </label>
       </div>
       <div class="label lbl-skin">Skin <em id="skinName">Aurora</em></div>
@@ -1235,6 +1235,12 @@ function biggest(p) {
 /* =====================================================================
    ACCIONES: DIVIDIR / EXPULSAR / EXPLOTAR
    ===================================================================== */
+// Dividir, expulsar masa o explotar contra un virus reinician la cuenta atrás de unión de todas las piezas
+function resetMerge(p) {
+  const t = now + MERGE_TIME;
+  for (const c of p.cells) c.mergeAt = t;
+}
+
 function splitPlayer(p) {
   const cells = p.cells;
   let count = cells.length;
@@ -1259,7 +1265,7 @@ function splitPlayer(p) {
     count++;
     did = true;
   }
-  if (did) { p.protectUntil = 0; dbg.splits++; }
+  if (did) { p.protectUntil = 0; dbg.splits++; resetMerge(p); }
   if (did && p === human) { Sound.split(); vibrate(12); }
   return did;
 }
@@ -1281,7 +1287,7 @@ function eject(p) {
     did = true;
   }
   if (ejected.length > 500) ejected.splice(0, ejected.length - 500);
-  if (did) p.protectUntil = 0;
+  if (did) { p.protectUntil = 0; resetMerge(p); }
   if (did && p === human) Sound.eject();
   return did;
 }
@@ -1290,6 +1296,7 @@ function popCell(c, v) {
   const p = c.owner;
   dbg.pops++;
   c.mass += v.m;
+  resetMerge(p);
   let alive = 0;
   for (const o of p.cells) if (!o.dead) alive++;
   const avail = MAX_CELLS - alive;
@@ -1313,7 +1320,7 @@ function popCell(c, v) {
     p.cells.push(n);
   }
   c.r = radiusOf(c.mass);
-  c.mergeAt = mt;
+  resetMerge(p);
 }
 
 function feedVirus(v, e) {
@@ -2615,11 +2622,14 @@ document.addEventListener('focusin', () => {
   if (!document.body.classList.contains('touch') || !isTyping() || kbBase) return;
   kbBase = { w: window.innerWidth, h: window.innerHeight };
   canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';   // el lienzo conserva su tamaño bajo el teclado
+  const f = document.activeElement;
+  setTimeout(() => { try { if (kbBase && f === document.activeElement) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* opcional */ } }, 350);
 });
 document.addEventListener('focusout', () => {
   if (!kbBase) return;
   kbBase = null;
   canvas.style.width = ''; canvas.style.height = '';
+  try { window.scrollTo(0, 0); } catch (e) { /* opcional */ }   // iOS desplaza la página al abrir el teclado
   setTimeout(resize, 250);
 });
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -2815,6 +2825,7 @@ function frame(t) {
   last = t;
   if (!(dt > 0)) return;
   if (dt > 0.1) dt = 0.1;
+  if (kbBase && state === 'menu') return;   // con el teclado abierto en el menú el fondo se queda quieto: sin tirones
 
   // calidad adaptativa: baja la resolución si el dispositivo va lento
   fpsAcc += dt; fpsN++;
