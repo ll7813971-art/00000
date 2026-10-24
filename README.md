@@ -64,8 +64,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   al reaparecer. Ningún bot lleva un color parecido al del jugador. Antes, con colores puramente al azar,
   en Ultra había ~220 parejas casi idénticas; ahora ninguna (también en partidas normales).
 - **Poderes:** el mapa tiene huecos de poder (8 en los mapas normales, 44 en Ultra). Cada hueco libre tira
-  cada 4 s: **30 % rayo**, **19 % bomba** y, si no, se queda vacío hasta la siguiente tirada. Salen en el
-  minimapa (rayos en amarillo, bombas en rojo).
+  cada 4 s: **30 % rayo**, **19 % bomba**, **11 % ácido** y, si no, se queda vacío hasta la siguiente tirada.
+  Salen en el minimapa (rayos en amarillo, bombas en rojo, ácido en verde).
   - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**, con una estela de su
     color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al cogerlo y, para el jugador,
     sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
@@ -76,6 +76,10 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
     llegar a cero, una explosión (bola de fuego, onda, temblor de pantalla y sonido) la **revienta en mini
     células** (si ya tiene 16 piezas, suelta masa en bolitas). Solo tiene un uso: si no da a nadie, se
     apaga. Solo se lleva una a la vez. Los bots también las cogen y las lanzan a los rivales grandes.
+  - **Ácido 🧪:** funciona como la bomba (se lleva en el centro de tu célula, botón **LANZAR** verde o tecla
+    **E**, un solo uso y solo una cosa para lanzar a la vez), pero la célula alcanzada **se pone verde**, burbujea,
+    gotea, lleva una calavera ☠ encima y **pierde el 8 % de su masa cada segundo durante 5 s** (se ve «-N» en
+    verde). Si te envenenan, el panel avisa «☠ ¡Envenenado! N s». Los bots también lo usan.
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.

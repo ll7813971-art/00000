@@ -314,6 +314,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 #mergeRow[hidden],#boltRow[hidden],#bombRow[hidden]{display:none}
 #bombRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:800;color:#f87171;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 #bombRow.hit{animation:bombBlink .5s steps(1) infinite}
+#bombRow.acid{color:#4ade80}
+#bombBtn.acid{background:radial-gradient(circle at 35% 30%,#bef264,#16a34a 60%,#14532d);box-shadow:0 10px 28px rgba(34,197,94,.45),inset 0 2px 0 rgba(255,255,255,.3);animation:none}
+#bombBtn .ic-acid,#bombBtn.acid .ic-bomb{display:none}
+#bombBtn.acid .ic-acid{display:block}
 @keyframes bombBlink{50%{color:#fde047}}
 #bombBtn{position:absolute;display:none;align-items:center;justify-content:center;gap:8px;pointer-events:auto;color:#fff;font-weight:900;letter-spacing:.08em;border:2px solid rgba(255,255,255,.4);
   background:radial-gradient(circle at 35% 30%,#fb923c,#dc2626 60%,#7f1d1d);box-shadow:0 10px 28px rgba(220,38,38,.45),inset 0 2px 0 rgba(255,255,255,.3);touch-action:none;-webkit-user-select:none;user-select:none;animation:bombGlow 1s ease-in-out infinite;transition:filter .08s}
@@ -542,12 +546,12 @@ body.touch .only-pc{display:none}
     <span><kbd>Ratón</kbd> moverse</span>
     <span><kbd>Espacio</kbd> dividir</span>
     <span><kbd>W</kbd> expulsar</span>
-    <span><kbd>E</kbd> bomba</span>
+    <span><kbd>E</kbd> lanzar</span>
     <span><kbd>Rueda</kbd> zoom</span>
     <span><kbd>Esc</kbd> pausa</span>
   </div>
   <div id="fps"></div>
-  <button id="bombBtn" aria-label="Lanzar bomba"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#111827" stroke="#fff" stroke-width="1.6"/><path d="M20 10q3-6 8-6" stroke="#fde68a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="4" r="2.6" fill="#fde047"/><circle cx="10.5" cy="15" r="2.4" fill="rgba(255,255,255,.5)"/></svg><span>LANZAR</span><kbd>E</kbd></button>
+  <button id="bombBtn" aria-label="Lanzar"><svg class="ic-acid" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v8l7 12a5 5 0 0 1-4.3 7.5H10.3A5 5 0 0 1 6 23l7-12z" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.6 20h14.8l2.2 3.8a3 3 0 0 1-2.6 4.5H9a3 3 0 0 1-2.6-4.5z" fill="#bef264"/><rect x="12" y="1.5" width="8" height="3" rx="1" fill="#fde68a"/></svg><svg class="ic-bomb" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#111827" stroke="#fff" stroke-width="1.6"/><path d="M20 10q3-6 8-6" stroke="#fde68a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="4" r="2.6" fill="#fde047"/><circle cx="10.5" cy="15" r="2.4" fill="rgba(255,255,255,.5)"/></svg><span>LANZAR</span><kbd>E</kbd></button>
   <div id="touch">
     <button id="btnEject" class="tbtn" aria-label="Expulsar masa">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5c3.6 4.4 6.5 8 6.5 11.4A6.5 6.5 0 0 1 5.5 13.9C5.5 10.5 8.4 6.9 12 2.5z"/></svg>
@@ -836,6 +840,9 @@ const BOLT_CHANCE = 0.30;    // cada hueco, al tirar, sale rayo con un 30 %…
 const BOMB_CHANCE = 0.19;    // …bomba con un 19 % (y si no, nada: vuelve a probar a los 4 s)
 const BOMB_R = 44;           // radio de la bomba en el mapa
 const BOMB_FUSE = 3;         // segundos que tarda en explotar la célula alcanzada
+const ACID_CHANCE = 0.11;    // …ácido con un 11 %
+const ACID_TIME = 5;         // el ácido dura 5 s…
+const ACID_RATE = 0.08;      // …y cada segundo quita el 8 % de la masa de la célula envenenada
 const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
 const mergeTimeOf = m => MERGE_TIME;
 
@@ -1019,6 +1026,47 @@ function makeBombSprite(S) {
   return cv;
 }
 let bombSprite = makeBombSprite(160);
+// matraz de ácido: cristal, líquido verde brillante, burbujas y tapón
+function makeAcidSprite(S) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const halo = g.createRadialGradient(S / 2, S * 0.62, S * 0.15, S / 2, S * 0.62, S * 0.5);
+  halo.addColorStop(0, 'rgba(74,222,128,0.45)'); halo.addColorStop(1, 'rgba(74,222,128,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, S, S);
+  const cx = S / 2, cy = S * 0.64, R = S * 0.27, nw = S * 0.13;
+  const flask = () => { g.beginPath(); g.moveTo(cx - nw / 2, S * 0.2); g.lineTo(cx - nw / 2, cy - R * 0.82); g.arc(cx, cy, R, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5, true); g.lineTo(cx + nw / 2, S * 0.2); g.closePath(); };
+  // cristal
+  flask(); g.fillStyle = 'rgba(220,255,230,0.18)'; g.fill();
+  // líquido
+  g.save(); flask(); g.clip();
+  const lq = g.createLinearGradient(0, cy - R * 0.4, 0, cy + R);
+  lq.addColorStop(0, '#bef264'); lq.addColorStop(0.5, '#22c55e'); lq.addColorStop(1, '#14532d');
+  g.fillStyle = lq; g.fillRect(0, cy - R * 0.35, S, S);
+  g.fillStyle = 'rgba(255,255,255,0.55)';
+  for (const [bx, by, br] of [[0.42, 0.66, 0.03], [0.56, 0.74, 0.022], [0.5, 0.58, 0.018], [0.6, 0.62, 0.014]]) { g.beginPath(); g.arc(bx * S, by * S, br * S, 0, TAU); g.fill(); }
+  g.restore();
+  flask(); g.lineWidth = S * 0.022; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.stroke();
+  // brillo del cristal
+  g.beginPath(); g.ellipse(cx - R * 0.45, cy - R * 0.25, R * 0.12, R * 0.3, 0.5, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.4)'; g.fill();
+  // tapón
+  g.fillStyle = '#a16207'; g.fillRect(cx - nw * 0.62, S * 0.12, nw * 1.24, S * 0.1);
+  g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(cx - nw * 0.62, S * 0.12, nw * 1.24, S * 0.025);
+  return cv;
+}
+let acidSprite = makeAcidSprite(160);
+// burbujas que suben del matraz (animadas)
+function drawFumes(x, y, S) {
+  for (let i = 0; i < 3; i++) {
+    const k = (now * 0.9 + i / 3) % 1;
+    ctx.globalAlpha = 0.8 * (1 - k);
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath(); ctx.arc(x + Math.sin(now * 3 + i * 2) * S * 0.06, y - S * (0.32 + k * 0.3), S * (0.035 + k * 0.03), 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+const throwSprite = k => (k === 'acid' ? acidSprite : bombSprite);
+function drawThrowFx(k, x, y, S) { if (k === 'acid') drawFumes(x, y, S); else drawSpark(x, y, S); }
 // chispa de la mecha (animada) para una bomba dibujada en (x, y) con tamaño S
 function drawSpark(x, y, S) {
   const sx = x + (BOMB_TIP[0] - 0.5) * S, sy = y + (BOMB_TIP[1] - 0.5) * S, f = 0.7 + Math.random() * 0.6;
@@ -1080,6 +1128,9 @@ const Sound = {
   bombThrow() { this.tone(900, 180, 0.22, 'sawtooth', 0.05); },
   bombHit() { this.tone(300, 120, 0.12, 'square', 0.06); },
   tick(n) { this.tone(n <= 1 ? 1900 : 1400, n <= 1 ? 1900 : 1400, 0.06, 'square', 0.035); },
+  acidPick() { this.tone(300, 900, 0.14, 'sine', 0.05); this.tone(700, 1300, 0.08, 'sine', 0.04, 0.09); },
+  acidHit() { this.tone(700, 160, 0.22, 'triangle', 0.08); this.tone(1400, 500, 0.12, 'sine', 0.04, 0.03); },
+  acidTick() { this.tone(340, 180, 0.12, 'sine', 0.05); this.tone(900, 600, 0.05, 'sine', 0.02, 0.05); },
   boom() { this.tone(140, 30, 0.75, 'sawtooth', 0.16); this.tone(70, 25, 0.95, 'triangle', 0.16); this.tone(420, 60, 0.4, 'square', 0.05, 0.02); },
   start() { [0, 0.09, 0.18].forEach((d, i) => this.tone(440 * (1 + i * 0.26), 880 * (1 + i * 0.26), 0.12, 'sine', 0.05, d)); }
 };
@@ -1130,7 +1181,7 @@ class Player {
     this.tx = 0; this.ty = 0;
     this.speedMul = 1;
     this.boostUntil = 0;                  // rayo: velocidad x1.5 hasta este momento
-    this.bomb = false;                    // lleva una bomba lista para lanzar
+    this.bomb = false;                    // lo que lleva para lanzar: false, 'bomb' o 'acid'
     this.bombSince = 0; this.nextBombCheck = 0;
     this.nextEject = 0;
     this.protectUntil = 0;
@@ -1169,6 +1220,7 @@ class Cell {
     // poderes: se declaran aquí (aunque casi siempre estén vacíos) para que todas las células tengan la misma
     // forma interna; añadirlos sobre la marcha volvía el juego 3 veces más lento en Ultra
     this.bombAt = 0; this.bombBy = null; this.bombSec = 0;   // bomba pegada: explota en bombAt
+    this.acidUntil = 0; this.acidNext = 0; this.acidBy = null; // ácido: pierde masa cada segundo hasta acidUntil
     this.trail = null; this.trailT = 0;                      // estela del rayo
   }
 }
@@ -1264,7 +1316,14 @@ function spawnVirus(x, y, vx, vy) {
 }
 
 /* ---------- Poderes: rayo y bomba ---------- */
-function rollPower() { const r = Math.random(); return r < BOLT_CHANCE ? 'bolt' : r < BOLT_CHANCE + BOMB_CHANCE ? 'bomb' : null; }
+function rollPower() {
+  const r = Math.random();
+  return r < BOLT_CHANCE ? 'bolt' : r < BOLT_CHANCE + BOMB_CHANCE ? 'bomb' : r < BOLT_CHANCE + BOMB_CHANCE + ACID_CHANCE ? 'acid' : null;
+}
+function inView(x, y, pad) {
+  const hw = vw / 2 / cam.s + pad, hh = vh / 2 / cam.s + pad;
+  return Math.abs(x - cam.x) < hw && Math.abs(y - cam.y) < hh;
+}
 function spawnPower(type) {
   let x = 0, y = 0;
   for (let t = 0; t < 20; t++) {
@@ -1287,12 +1346,16 @@ function pickPower(o, c) {
     if (p === human) { Sound.power(); vibrate([15, 30, 25]); addFloat(c.x, c.y - c.r - 30, '⚡ ¡Velocidad x1.5!'); }
     dbg.bolts = (dbg.bolts || 0) + 1;
   } else {
-    p.bomb = true;                                    // la bomba se queda en el centro de tu célula
+    const acid = o.type === 'acid';
+    p.bomb = o.type;                                  // la bomba (o el ácido) se queda en el centro de tu célula
     p.bombSince = now;
-    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(70, c.r * 1.3), col: '#f87171' });
-    burst(o.x, o.y, '#f97316', 12, 30);
-    if (p === human) { Sound.bombPick(); vibrate(20); addFloat(c.x, c.y - c.r - 30, inputMode === 'touch' ? '💣 ¡Bomba! Pulsa LANZAR' : '💣 ¡Bomba! Pulsa E'); }
-    dbg.bombsPicked = (dbg.bombsPicked || 0) + 1;
+    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(70, c.r * 1.3), col: acid ? '#4ade80' : '#f87171' });
+    burst(o.x, o.y, acid ? '#4ade80' : '#f97316', 12, 30);
+    if (p === human) {
+      acid ? Sound.acidPick() : Sound.bombPick(); vibrate(20);
+      addFloat(c.x, c.y - c.r - 30, (acid ? '🧪 ¡Ácido!' : '💣 ¡Bomba!') + (inputMode === 'touch' ? ' Pulsa LANZAR' : ' Pulsa E'));
+    }
+    dbg[acid ? 'acidPicked' : 'bombsPicked'] = (dbg[acid ? 'acidPicked' : 'bombsPicked'] || 0) + 1;
   }
 }
 // lanza la bomba hacia donde mira el jugador (o hacia el punto ax, ay)
@@ -1306,8 +1369,9 @@ function throwBomb(p, ax, ay) {
   let d = Math.hypot(dx, dy);
   if (d < 1) { dx = 1; dy = 0; d = 1; }
   const nx = dx / d, ny = dy / d, sp = 1500 + c.r * 1.6;
+  const kind = p.bomb;
   p.bomb = false;
-  thrown.push({ x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, dead: false });
+  thrown.push({ kind, x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, dead: false });
   if (p === human) { Sound.bombThrow(); vibrate(12); }
   dbg.bombsThrown = (dbg.bombsThrown || 0) + 1;
   return true;
@@ -1357,7 +1421,7 @@ function botBomb(b) {
   const range = 900 + big.r * 1.2, sp = 1500 + big.r * 1.6;
   let best = null, bestS = 0;
   for (const c of allCells) {
-    if (c.owner === b || c.dead || c.bombAt || c.owner.protectUntil > now || c.mass < 30) continue;
+    if (c.owner === b || c.dead || (b.bomb === 'acid' ? c.acidUntil > now : c.bombAt) || c.owner.protectUntil > now || c.mass < 30) continue;
     const d = Math.hypot(c.x - big.x, c.y - big.y) - big.r;
     if (d > range) continue;
     const sc = (c.mass / (big.mass + 50)) * (1 + (c.mass > big.mass * 0.9 ? 1.5 : 0)) / (d + 300);   // prefiere a los grandes y peligrosos
@@ -1373,7 +1437,7 @@ function updatePowers(dt) {
     if (o.dead) continue;
     const pr = o.type === 'bolt' ? BOLT_R : BOMB_R;
     for (const c of allCells) {
-      if (o.type === 'bomb' && c.owner.bomb) continue;
+      if (o.type !== 'bolt' && c.owner.bomb) continue;   // solo se lleva una cosa para lanzar
       const lim = c.r + pr * 0.6, dx = c.x - o.x, dy = c.y - o.y;
       if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
       if (dx * dx + dy * dy < lim * lim) { pickPower(o, c); break; }
@@ -1392,23 +1456,51 @@ function updatePowers(dt) {
     if (t.x < 0 || t.y < 0 || t.x > WORLD || t.y > WORLD || now - t.born > 1.7) {   // no tocó a nadie: se apaga
       t.dead = true; burst(clamp(t.x, 0, WORLD), clamp(t.y, 0, WORLD), '#9ca3af', 8, 10); continue;
     }
-    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: 'rgba(160,160,170,0.8)' });
+    const acid = t.kind === 'acid';
+    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: acid ? 'rgba(74,222,128,0.85)' : 'rgba(160,160,170,0.8)' });
     for (const c of allCells) {
-      if (c.owner === t.owner || c.dead || c.bombAt || c.owner.protectUntil > now) continue;
+      if (c.owner === t.owner || c.dead || (!acid && c.bombAt) || c.owner.protectUntil > now) continue;
       const lim = c.r + BOMB_R * 0.5, dx = c.x - t.x, dy = c.y - t.y;
       if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
       if (dx * dx + dy * dy < lim * lim) {
         t.dead = true;
-        c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
-        shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
-        burst(t.x, t.y, '#ef4444', 10, 20);
-        if (c.owner === human) { Sound.bombHit(); vibrate([30, 30, 30]); }
-        else if (t.owner === human) Sound.bombHit();
+        if (acid) {                                       // ácido: la célula se pone verde y pierde masa cada segundo
+          c.acidUntil = now + ACID_TIME; c.acidNext = now + 1; c.acidBy = t.owner;
+          shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#4ade80' });
+          burst(t.x, t.y, '#4ade80', 16, 30); burst(t.x, t.y, '#bef264', 8, 20);
+          if (c.owner === human) { Sound.acidHit(); vibrate([20, 20, 40]); }
+          else if (t.owner === human) Sound.acidHit();
+          dbg.acidHits = (dbg.acidHits || 0) + 1;
+        } else {
+          c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
+          shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
+          burst(t.x, t.y, '#ef4444', 10, 20);
+          if (c.owner === human) { Sound.bombHit(); vibrate([30, 30, 30]); }
+          else if (t.owner === human) Sound.bombHit();
+        }
         break;
       }
     }
   }
   for (let i = thrown.length - 1; i >= 0; i--) if (thrown[i].dead) thrown.splice(i, 1);
+  // células envenenadas con ácido: cada segundo pierden masa (5 veces)
+  for (const c of allCells) {
+    if (!c.acidUntil) continue;
+    if (now >= c.acidNext && c.acidNext <= c.acidUntil + 0.01) {
+      c.acidNext += 1;
+      const loss = Math.min(c.mass - 10, Math.max(2, c.mass * ACID_RATE));
+      if (loss > 0) {
+        c.mass -= loss; c.r = radiusOf(c.mass);
+        const mine = c.owner === human || c.acidBy === human;
+        if (mine || inView(c.x, c.y, c.r)) {
+          burst(c.x, c.y, '#4ade80', 8, c.r * 0.15);
+          addFloat(c.x, c.y - c.r - 20, '-' + fmt(loss), '#4ade80');
+        }
+        if (mine) Sound.acidTick();
+      }
+    }
+    if (now > c.acidUntil + 0.05) c.acidUntil = 0;
+  }
   // células con la bomba pegada: tic-tac y explosión
   for (const c of allCells) {
     if (!c.bombAt) continue;
@@ -2207,6 +2299,7 @@ function collide(dt) {
         if (now >= a.mergeAt && now >= b.mergeAt && d < a.r - b.r * 0.3) {
           a.mass += b.mass; a.r = radiusOf(a.mass); b.dead = true;
           if (b.bombAt && !a.bombAt) { a.bombAt = b.bombAt; a.bombBy = b.bombBy; }   // la bomba no se escapa uniéndose
+          if (b.acidUntil > a.acidUntil) { a.acidUntil = b.acidUntil; a.acidNext = b.acidNext; a.acidBy = b.acidBy; }   // ni el ácido
         }
       } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
         if (d < a.r - b.r * EAT_COVER) eatCell(a, b);
@@ -2321,8 +2414,8 @@ function burst(x, y, color, n, spread) {
     particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: rand(0.35, 0.75), r: rand(3, 7) + spread * 0.05, color });
   }
 }
-function addFloat(x, y, text) {
-  floats.push({ x, y, text, life: 0, max: 1.1 });
+function addFloat(x, y, text, color) {
+  floats.push({ x, y, text, life: 0, max: 1.1, color: color || '#fde68a' });
 }
 function updateFx(dt) {
   const damp = Math.exp(-3.5 * dt);
@@ -2360,6 +2453,7 @@ function rebuildGraphics() {
   virusSprite = makeVirusSprite(256);
   boltSprite = makeBoltSprite(160);
   bombSprite = makeBombSprite(160);
+  acidSprite = makeAcidSprite(160);
   pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
   pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
   pelletSprites = pelletSets[settings.theme];
@@ -2490,6 +2584,44 @@ function drawBoltAura(c, r, s) {
   ctx.restore();
 }
 
+// célula envenenada: se tiñe de verde, burbujea, gotea y lleva una calavera encima
+function drawAcidAura(c, r, s) {
+  const left = c.acidUntil - now, fade = Math.min(1, left / 0.4), pulse = 0.5 + 0.5 * Math.sin(now * 7 + c.id);
+  ctx.save();
+  ctx.globalAlpha = (0.5 + pulse * 0.15) * fade;
+  const g = ctx.createRadialGradient(c.x - r * 0.3, c.y - r * 0.3, r * 0.1, c.x, c.y, r);
+  g.addColorStop(0, '#bef264'); g.addColorStop(1, '#15803d');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+  // burbujas que suben dentro de la célula
+  ctx.lineWidth = Math.max(1.5 / s, r * 0.02);
+  for (let i = 0; i < 7; i++) {
+    const k = (now * 0.7 + i / 7 + c.id * 0.13) % 1;
+    ctx.globalAlpha = 0.85 * (1 - k) * fade;
+    ctx.strokeStyle = '#dcfce7';
+    ctx.beginPath(); ctx.arc(c.x + Math.sin(i * 2.3 + c.id) * r * 0.55, c.y + r * 0.6 - k * r * 1.2, r * (0.07 - k * 0.03), 0, TAU); ctx.stroke();
+  }
+  // gotas que caen
+  ctx.fillStyle = '#4ade80';
+  for (let i = 0; i < 3; i++) {
+    const k = (now * 1.1 + i / 3 + c.id * 0.07) % 1;
+    ctx.globalAlpha = (1 - k) * fade;
+    ctx.beginPath(); ctx.arc(c.x + (i - 1) * r * 0.42, c.y + r * (0.92 + k * 0.45) - Math.abs(i - 1) * r * 0.25, r * 0.05 * (1 - k * 0.4), 0, TAU); ctx.fill();
+  }
+  // anillo verde que gira
+  ctx.globalAlpha = (0.6 + pulse * 0.3) * fade;
+  ctx.setLineDash([r * 0.18, r * 0.1]); ctx.lineDashOffset = -now * r * 0.6;
+  ctx.lineWidth = Math.max(3 / s, r * 0.05); ctx.strokeStyle = '#4ade80';
+  ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.05 + 4 / s, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  // calavera
+  const fs = Math.max(20 / s, r * 0.45) * (1 + pulse * 0.08);
+  ctx.globalAlpha = fade;
+  ctx.font = `900 ${Math.round(fs)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#4ade80'; ctx.fillText('☠', c.x, c.y - r - fs * 0.55 - (c.bombAt ? fs * 1.3 : 0));
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
+}
+
 // aura roja y cuenta atrás (3, 2, 1) de una célula con la bomba pegada
 function drawBombAura(c, r, s) {
   const left = c.bombAt - now, sec = Math.max(1, Math.ceil(left)), f = left - Math.floor(left);
@@ -2541,12 +2673,13 @@ function drawCell(c, s) {
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   }
   if (p.boostUntil > now) drawBoltAura(c, r, s);
+  if (c.acidUntil > now) drawAcidAura(c, r, s);
   if (c.bombAt) drawBombAura(c, r, s);
   const holding = p.bomb && c === biggest(p);
   if (holding) {                                  // la bomba que llevas, en el centro de tu célula
     const S = Math.max(30 / s, r * 0.82);
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(Math.sin(now * 3) * 0.15);
-    ctx.drawImage(bombSprite, -S / 2, -S / 2, S, S); drawSpark(0, 0, S);
+    ctx.drawImage(throwSprite(p.bomb), -S / 2, -S / 2, S, S); drawThrowFx(p.bomb, 0, 0, S);
     ctx.restore();
     ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
   }
@@ -2609,14 +2742,14 @@ function render() {
   // poderes: rayos y bombas (flotan, laten y se balancean)
   for (const o of powers) {
     if (o.dead) continue;
-    const bomb = o.type === 'bomb', S = bomb ? BOMB_R * 2.9 : BOLT_R * 3.2;
+    const bomb = o.type !== 'bolt', S = bomb ? BOMB_R * 2.9 : BOLT_R * 3.2;
     if (o.x + S < L || o.x - S > R || o.y + S < T || o.y - S > B) continue;
     const age = now - o.born, sc = (age < 0.4 ? age / 0.4 : 1) * (1 + Math.sin(now * 4 + o.ph) * 0.08);
     ctx.save();
     ctx.translate(o.x, o.y + Math.sin(now * 2.2 + o.ph) * 7);
     ctx.rotate(Math.sin(now * 1.6 + o.ph) * (bomb ? 0.12 : 0.18));
-    ctx.drawImage(bomb ? bombSprite : boltSprite, -S * sc / 2, -S * sc / 2, S * sc, S * sc);
-    if (bomb) drawSpark(0, 0, S * sc);
+    ctx.drawImage(bomb ? throwSprite(o.type) : boltSprite, -S * sc / 2, -S * sc / 2, S * sc, S * sc);
+    if (bomb) drawThrowFx(o.type, 0, 0, S * sc);
     ctx.restore();
   }
 
@@ -2687,7 +2820,7 @@ function render() {
     const S = BOMB_R * 2.6;
     if (t.x + S < L || t.x - S > R || t.y + S < T || t.y - S > B) continue;
     ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.rot);
-    ctx.drawImage(bombSprite, -S / 2, -S / 2, S, S); drawSpark(0, 0, S);
+    ctx.drawImage(throwSprite(t.kind), -S / 2, -S / 2, S, S); drawThrowFx(t.kind, 0, 0, S);
     ctx.restore();
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
@@ -2738,7 +2871,7 @@ function render() {
       const k = f.life / f.max;
       ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
       ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.strokeText(f.text, f.x, f.y);
-      ctx.fillStyle = '#fde68a'; ctx.fillText(f.text, f.x, f.y);
+      ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
     }
     ctx.globalAlpha = 1;
   }
@@ -2764,7 +2897,7 @@ function drawMinimap() {
     mctx.fillStyle = theme.mmVirus;
     mctx.fillRect(v.x * k - 1, v.y * k - 1, 2, 2);
   }
-  for (const o of powers) { if (o.dead) continue; mctx.fillStyle = o.type === 'bolt' ? '#facc15' : '#f87171'; mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3); }
+  for (const o of powers) { if (o.dead) continue; mctx.fillStyle = o.type === 'bolt' ? '#facc15' : o.type === 'acid' ? '#a3e635' : '#f87171'; mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3); }
   for (const p of players) {
     if (!p.alive || p === human) continue;
     const c = biggest(p);
@@ -2840,13 +2973,21 @@ function updateHud(dt) {
     if (br.hidden === bl > 0) br.hidden = !(bl > 0);
     if (bl > 0) $('boltVal').textContent = fmtTime(Math.ceil(bl));
     // bomba: lista para lanzar, o pegada a una de tus células (cuenta atrás)
-    let hit = 0;
-    if (human.alive) for (const c of human.cells) if (c.bombAt) hit = Math.max(hit, c.bombAt - now);
-    const bRow = $('bombRow'), bShow = human.alive && (human.bomb || hit > 0);
+    let hit = 0, acidLeft = 0;
+    if (human.alive) for (const c of human.cells) { if (c.bombAt) hit = Math.max(hit, c.bombAt - now); if (c.acidUntil) acidLeft = Math.max(acidLeft, c.acidUntil - now); }
+    const bRow = $('bombRow'), bShow = human.alive && (!!human.bomb || hit > 0 || acidLeft > 0);
     if (bRow.hidden === bShow) bRow.hidden = !bShow;
-    if (bShow) { bRow.classList.toggle('hit', hit > 0); $('bombTxt').textContent = hit > 0 ? '💥 ¡Bomba! Explota en ' + Math.ceil(hit) : (inputMode === 'touch' ? '💣 Bomba · pulsa LANZAR' : '💣 Bomba · pulsa E'); }
-    const bb = $('bombBtn'), bOn = state === 'playing' && human.alive && human.bomb;
+    if (bShow) {
+      const key = inputMode === 'touch' ? ' · pulsa LANZAR' : ' · pulsa E';
+      bRow.classList.toggle('hit', hit > 0);
+      bRow.classList.toggle('acid', hit <= 0 && (acidLeft > 0 || human.bomb === 'acid'));
+      $('bombTxt').textContent = hit > 0 ? '💥 ¡Bomba! Explota en ' + Math.ceil(hit)
+        : acidLeft > 0 ? '☠ ¡Envenenado! ' + Math.ceil(acidLeft) + ' s'
+        : human.bomb === 'acid' ? '🧪 Ácido' + key : '💣 Bomba' + key;
+    }
+    const bb = $('bombBtn'), bOn = state === 'playing' && human.alive && !!human.bomb;
     if (bb.classList.contains('show') !== bOn) bb.classList.toggle('show', bOn);
+    if (bOn && bb.classList.contains('acid') !== (human.bomb === 'acid')) bb.classList.toggle('acid', human.bomb === 'acid');
   }
   if (mmT <= 0) { mmT = 1 / 20; drawMinimap(); }
 }
