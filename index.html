@@ -117,7 +117,7 @@ svg{display:block}
 /* ============ Pantallas ============ */
 .screen{
   position:fixed;inset:0;z-index:20;display:flex;overflow-y:auto;overflow-x:hidden;
-  padding:calc(18px + var(--st)) calc(16px + var(--sr)) calc(18px + var(--sb)) calc(16px + var(--sl));
+  padding:calc(18px + var(--st)) calc(16px + var(--sr)) calc(18px + var(--sb) + var(--kb, 0px)) calc(16px + var(--sl));
   opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;touch-action:pan-y;
 }
 .screen.show{opacity:1;visibility:visible;pointer-events:auto}
@@ -891,7 +891,7 @@ function makePelletSprite(col, light) {
   return cv;
 }
 
-const virusSprite = makeVirusSprite(256);
+let virusSprite = makeVirusSprite(256);
 const pelletSets = { dark: PELLET_COLORS.map(c => makePelletSprite(c, false)), light: PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true)) };
 let pelletSprites = pelletSets.dark;
 const PELLET_DRAW = 48 / 11; // tamaño del sprite / radio del núcleo
@@ -1999,6 +1999,28 @@ const drawList = [];
 // Teclado del móvil: al escribir el apodo la ventana se acorta, pero el juego no debe reescalarse ni deformarse
 const isTyping = () => { const a = document.activeElement; return !!a && a.matches && a.matches('input[type=text],input:not([type]),textarea'); };
 let kbBase = null;   // tamaño de la ventana al abrirse el teclado (null = teclado cerrado)
+// Si el móvil pierde los gráficos (pasa en Chrome al abrir el teclado en pantalla completa o al volver de otra app)
+// el lienzo se queda en negro y los sprites vacíos: se rehacen todos y se vuelve a dibujar.
+function rebuildGraphics() {
+  virusSprite = makeVirusSprite(256);
+  pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
+  pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
+  pelletSprites = pelletSets[settings.theme];
+  for (const p of players) { p.setSkin(p.skin); p.nameSprite = null; }
+  if (!players.includes(human)) { human.setSkin(human.skin); human.nameSprite = null; }
+  try { drawAvatar(); } catch (e) { /* menú aún sin construir */ }
+  resize();
+}
+let gfxLost = false;
+const isLost = g => !!(g && g.isContextLost && g.isContextLost());
+function checkGraphics() {
+  const lost = isLost(ctx) || isLost(virusSprite.getContext('2d')) || isLost(human.sprite && human.sprite.getContext('2d'));
+  if (lost) gfxLost = true;
+  else if (gfxLost) { gfxLost = false; rebuildGraphics(); }
+}
+canvas.addEventListener('contextlost', () => { gfxLost = true; });
+canvas.addEventListener('contextrestored', () => { gfxLost = false; rebuildGraphics(); });
+
 function resize() {
   if (kbBase) {
     if (Math.abs(window.innerWidth - kbBase.w) <= 40) return;   // solo es el teclado (también en pantalla completa)
@@ -2616,22 +2638,49 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'W') input.eject = false; });
 window.addEventListener('blur', () => { input.eject = false; });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); else checkGraphics(); });
 window.addEventListener('resize', resize);
-document.addEventListener('focusin', () => {
-  if (!document.body.classList.contains('touch') || !isTyping() || kbBase) return;
+// Teclado del móvil. En Chrome (API VirtualKeyboard) el teclado se superpone a la página sin redimensionarla,
+// así que el juego ni se entera (también en pantalla completa). En el resto de navegadores se ignora el cambio
+// de altura mientras se escribe. El juego se sigue dibujando siempre: nunca se queda congelado ni en negro.
+const VK = navigator.virtualKeyboard || null;
+if (VK) { try { VK.overlaysContent = true; } catch (e) { /* no permitido */ } }
+function kbHeight() {
+  try { if (VK && VK.overlaysContent && VK.boundingRect) return Math.max(0, VK.boundingRect.height); } catch (e) { /* sin API */ }
+  return 0;
+}
+function keepFieldVisible() {
+  if (!isTyping()) return;
+  const f = document.activeElement, sc = f.closest('.screen');
+  if (!sc) return;
+  let bottom = window.innerHeight - kbHeight();
+  if (window.visualViewport) bottom = Math.min(bottom, visualViewport.height + visualViewport.offsetTop);
+  const r = f.getBoundingClientRect();
+  if (r.bottom > bottom - 16) sc.scrollTop += r.bottom - bottom + 16;
+  else if (r.top < 12) sc.scrollTop -= 12 - r.top;
+}
+function pinCanvas() {
   kbBase = { w: window.innerWidth, h: window.innerHeight };
   canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';   // el lienzo conserva su tamaño bajo el teclado
-  const f = document.activeElement;
-  setTimeout(() => { try { if (kbBase && f === document.activeElement) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* opcional */ } }, 350);
-});
-document.addEventListener('focusout', () => {
-  if (!kbBase) return;
+}
+function releaseKb() {
   kbBase = null;
   canvas.style.width = ''; canvas.style.height = '';
-  try { window.scrollTo(0, 0); } catch (e) { /* opcional */ }   // iOS desplaza la página al abrir el teclado
+  document.documentElement.style.setProperty('--kb', '0px');
+  try { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); } catch (e) { /* opcional */ }   // iOS desplaza la página
   setTimeout(resize, 250);
+}
+document.addEventListener('focusin', () => {
+  if (!document.body.classList.contains('touch') || !isTyping() || kbBase) return;
+  pinCanvas();
+  setTimeout(keepFieldVisible, 350);
 });
+document.addEventListener('focusout', () => { if (kbBase) releaseKb(); });
+if (VK) VK.addEventListener('geometrychange', () => {
+  document.documentElement.style.setProperty('--kb', kbHeight() + 'px');   // deja sitio para desplazar el menú
+  requestAnimationFrame(keepFieldVisible);
+});
+if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (kbBase) requestAnimationFrame(keepFieldVisible); });
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 /* =====================================================================
@@ -2773,7 +2822,13 @@ function buildUI() {
       else if (act === 'restartbg') restartBackground();
     });
   }
-  const onFs = () => { if (isTyping()) document.activeElement.blur(); setTimeout(resize, 100); };
+  // al entrar o salir de pantalla completa se mide de nuevo (sin cerrar el teclado si estás escribiendo)
+  const onFs = () => {
+    const typing = !!kbBase;
+    if (typing) { kbBase = null; canvas.style.width = ''; canvas.style.height = ''; }
+    setTimeout(() => { resize(); if (typing && isTyping()) pinCanvas(); }, 150);
+    setTimeout(() => { if (!kbBase) resize(); }, 600);
+  };
   document.addEventListener('fullscreenchange', onFs);
   document.addEventListener('webkitfullscreenchange', onFs);
 
@@ -2825,14 +2880,15 @@ function frame(t) {
   last = t;
   if (!(dt > 0)) return;
   if (dt > 0.1) dt = 0.1;
-  if (kbBase && state === 'menu') return;   // con el teclado abierto en el menú el fondo se queda quieto: sin tirones
+  if (kbBase && !isTyping()) releaseKb();   // red de seguridad: el campo perdió el foco sin avisar
 
   // calidad adaptativa: baja la resolución si el dispositivo va lento
   fpsAcc += dt; fpsN++;
   if (fpsAcc >= 1) {
     const fps = fpsN / fpsAcc;
     el.fps.textContent = Math.round(fps) + ' FPS';
-    if (settings.quality === 'auto' && fps < 42 && dpr > 1) { if (++slowChecks >= 2) { dpr = Math.max(1, dpr - 0.5); resize(); slowChecks = 0; } }
+    checkGraphics();
+    if (settings.quality === 'auto' && fps < 42 && dpr > 1 && !kbBase) { if (++slowChecks >= 2) { dpr = Math.max(1, dpr - 0.5); resize(); slowChecks = 0; } }
     else slowChecks = 0;
     fpsAcc = 0; fpsN = 0;
   }
