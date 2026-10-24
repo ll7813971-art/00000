@@ -311,7 +311,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 #stats .srow div{display:flex;flex-direction:column}
 #stats .srow b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
 #mergeRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-#mergeRow[hidden]{display:none}
+#mergeRow[hidden],#boltRow[hidden]{display:none}
+#boltRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:800;color:#facc15;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;animation:boltPulse 1s ease-in-out infinite}
+#boltRow b{font-size:13px;font-variant-numeric:tabular-nums;color:var(--text)}
+@keyframes boltPulse{50%{text-shadow:0 0 10px rgba(250,204,21,.7)}}
 #mergeRow b{font-size:13px;font-variant-numeric:tabular-nums;background:var(--grad-warm);-webkit-background-clip:text;background-clip:text;color:transparent}
 #stats .srow span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
 #subRow{display:flex;gap:10px;align-items:flex-start}
@@ -507,6 +510,7 @@ body.touch .only-pc{display:none}
         <div><b id="timeVal">0:00</b><span>Tiempo</span></div>
       </div>
       <div id="mergeRow" hidden><span>Unión en</span> <b id="mergeVal">0:30</b></div>
+      <div id="boltRow" hidden><span>⚡ Rayo</span> <b id="boltVal">0:15</b></div>
     </div>
     <div id="subRow">
       <div id="minimapWrap" class="glass"><canvas id="minimap" aria-label="Minimapa"></canvas></div>
@@ -809,6 +813,10 @@ const SPAWN_SHIELD = 3;      // segundos de protección al aparecer
 const radiusOf = m => Math.sqrt(m) * 10;
 const speedOf = m => 520 * Math.pow(m, -0.22);
 const splitDistOf = r => 360 + r * 0.7;
+const BOLT_SPEED = 1.5;      // poder del rayo: velocidad x1.5…
+const BOLT_TIME = 15;        // …durante 15 segundos
+const BOLT_R = 48;           // radio del rayo en el mapa
+const BOLT_AREA = 4.5e6;     // un rayo por cada 4,5 millones de px² (8 en el mapa normal, ~44 en Ultra)
 const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
 const mergeTimeOf = m => MERGE_TIME;
 
@@ -946,6 +954,25 @@ function makePelletSprite(col, light) {
 }
 
 let virusSprite = makeVirusSprite(256);
+function makeBoltSprite(S) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const halo = g.createRadialGradient(S / 2, S / 2, S * 0.08, S / 2, S / 2, S / 2);
+  halo.addColorStop(0, 'rgba(253,224,71,0.55)'); halo.addColorStop(0.5, 'rgba(250,204,21,0.18)'); halo.addColorStop(1, 'rgba(250,204,21,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, S, S);
+  const P = [[0.60, 0.10], [0.30, 0.55], [0.48, 0.55], [0.38, 0.90], [0.72, 0.42], [0.54, 0.42], [0.68, 0.10]];
+  g.beginPath();
+  P.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
+  g.closePath();
+  const lg = g.createLinearGradient(S * 0.3, S * 0.1, S * 0.7, S * 0.9);
+  lg.addColorStop(0, '#fffbe0'); lg.addColorStop(0.35, '#fde047'); lg.addColorStop(1, '#f59e0b');
+  g.fillStyle = lg; g.fill();
+  g.lineJoin = 'round'; g.lineWidth = S * 0.035; g.strokeStyle = '#b45309'; g.stroke();
+  g.lineWidth = S * 0.012; g.strokeStyle = 'rgba(255,255,255,0.75)'; g.stroke();
+  return cv;
+}
+let boltSprite = makeBoltSprite(160);
 const pelletSets = { dark: PELLET_COLORS.map(c => makePelletSprite(c, false)), light: PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true)) };
 let pelletSprites = pelletSets.dark;
 const PELLET_DRAW = 48 / 11; // tamaño del sprite / radio del núcleo
@@ -953,6 +980,7 @@ const PELLET_DRAW = 48 / 11; // tamaño del sprite / radio del núcleo
 /* =====================================================================
    SONIDO (WebAudio sintetizado, sin archivos)
    ===================================================================== */
+const VOL_GAIN = 3.3;   // volumen general (3 veces el original, 1.1)
 const Sound = {
   ctx: null, master: null, on: true, vol: 0.8, lp: 0, le: 0,
   init() {
@@ -962,8 +990,11 @@ const Sound = {
       if (!AC) return;
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 1.1 * this.vol;
-      this.master.connect(this.ctx.destination);
+      this.master.gain.value = VOL_GAIN * this.vol;
+      // limitador: con el volumen triplicado los sonidos fuertes no se distorsionan
+      const lim = this.ctx.createDynamicsCompressor();
+      lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 14; lim.attack.value = 0.002; lim.release.value = 0.18;
+      this.master.connect(lim); lim.connect(this.ctx.destination);
     } catch (e) { this.ctx = null; }
   },
   tone(f1, f2, dur, type, vol, delay) {
@@ -988,7 +1019,9 @@ const Sound = {
   die() { this.tone(420, 55, 0.8, 'sawtooth', 0.1); this.tone(260, 40, 0.9, 'triangle', 0.08, 0.1); },
   click() { this.tone(620, 920, 0.05, 'sine', 0.04); },
   win() { [0, 0.1, 0.2, 0.32].forEach((d, i) => this.tone(520 * Math.pow(1.26, i), 560 * Math.pow(1.26, i), 0.16, 'triangle', 0.06, d)); },
-  setVolume(v) { this.vol = v; if (this.master) this.master.gain.value = 1.1 * v; },
+  setVolume(v) { this.vol = v; if (this.master) this.master.gain.value = VOL_GAIN * v; },
+  power() { this.tone(260, 1900, 0.28, 'sawtooth', 0.07); this.tone(900, 2600, 0.16, 'square', 0.025, 0.05); this.tone(1500, 3200, 0.12, 'sine', 0.05, 0.12); },
+  powerEnd() { this.tone(900, 260, 0.3, 'triangle', 0.06); },
   start() { [0, 0.09, 0.18].forEach((d, i) => this.tone(440 * (1 + i * 0.26), 880 * (1 + i * 0.26), 0.12, 'sine', 0.05, d)); }
 };
 
@@ -1037,6 +1070,7 @@ class Player {
     this.alive = false;
     this.tx = 0; this.ty = 0;
     this.speedMul = 1;
+    this.boostUntil = 0;                  // rayo: velocidad x1.5 hasta este momento
     this.nextEject = 0;
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
@@ -1086,6 +1120,9 @@ const ejected = [];
 const particles = [];
 const ghosts = [];
 const floats = [];
+const bolts = [];          // rayos de poder en el mapa
+const shocks = [];         // anillos eléctricos al recoger un rayo
+let boltMax = 8;
 let cellGrid = new Grid(300);
 let ejGrid = new Grid(300);
 const qBufA = [], qBufB = [], qBufC = [], eatenBuf = [], botCT = [];
@@ -1158,6 +1195,62 @@ function spawnVirus(x, y, vx, vy) {
   viruses.push({ isVirus: true, x, y, vx: vx || 0, vy: vy || 0, m: VIRUS_MASS, r, dr: r, feed: 0, rot: Math.random() * TAU, dead: false });
 }
 
+/* ---------- Rayos de poder ---------- */
+function spawnBolt(delay) {
+  let x = 0, y = 0;
+  for (let t = 0; t < 20; t++) {
+    x = rand(200, WORLD - 200); y = rand(200, WORLD - 200);
+    let ok = true;
+    for (const v of viruses) if (Math.hypot(v.x - x, v.y - y) < v.r + 160) { ok = false; break; }
+    if (ok) for (const o of bolts) if (Math.hypot(o.x - x, o.y - y) < 900) { ok = false; break; }
+    if (ok) break;
+  }
+  bolts.push({ x, y, born: now + (delay || 0), ph: Math.random() * TAU, dead: false });
+}
+function boosted(p) { return p.boostUntil > now; }
+function pickBolt(o, c) {
+  const p = c.owner;
+  o.dead = true;
+  p.boostUntil = now + BOLT_TIME;                  // recoger otro mientras dura reinicia los 15 s
+  shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(80, c.r * 1.6) });
+  burst(o.x, o.y, '#fde047', 18, 40); burst(o.x, o.y, '#67e8f9', 8, 30);
+  if (p === human) {
+    Sound.power(); vibrate([15, 30, 25]);
+    addFloat(c.x, c.y - c.r - 30, '⚡ ¡Velocidad x1.5!');
+  }
+  dbg.bolts = (dbg.bolts || 0) + 1;
+}
+function updateBolts(dt) {
+  // recoger: basta con que la célula toque el rayo
+  for (const o of bolts) {
+    if (o.dead || now < o.born) continue;
+    for (const c of allCells) {
+      const lim = c.r + BOLT_R * 0.6, dx = c.x - o.x, dy = c.y - o.y;
+      if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
+      if (dx * dx + dy * dy < lim * lim) { pickBolt(o, c); break; }
+    }
+  }
+  let alive = 0;
+  for (let i = bolts.length - 1; i >= 0; i--) { if (bolts[i].dead) bolts.splice(i, 1); else alive++; }
+  while (alive < boltMax) { spawnBolt(rand(6, 14)); alive++; }   // vuelven a salir en otro sitio al rato
+  for (let i = shocks.length - 1; i >= 0; i--) if (now - shocks[i].t0 > 0.6) shocks.splice(i, 1);
+  // estela de quien va con el rayo
+  for (const c of allCells) {
+    if (boosted(c.owner)) {
+      if (!c.trail) { c.trail = []; c.trailT = 0; }
+      c.trailT -= dt;
+      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.push(c.x, c.y); if (c.trail.length > 36) c.trail.splice(0, 2); }
+    } else if (c.trail && c.trail.length) {
+      c.trailT -= dt;
+      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.splice(0, 2); }   // al acabarse, la estela se recoge
+    }
+  }
+  if (human.boostUntil && now >= human.boostUntil) {
+    human.boostUntil = 0;
+    if (human.alive) { Sound.powerEnd(); const b = biggest(human); if (b) addFloat(b.x, b.y - b.r - 30, 'Fin del rayo'); }
+  }
+}
+
 /* ---------- Jugadores ---------- */
 // Colores sin repetir: de varios colores al azar se queda con el más distinto de todos los que ya hay en la arena
 function skinDist(a, b) {
@@ -1219,6 +1312,7 @@ function spawnPlayer(p, mass) {
   p.tx = s.x; p.ty = s.y;
   p.shoot = null;
   p.protectUntil = now + SPAWN_SHIELD;
+  p.boostUntil = 0;
 }
 
 function initWorld(key, fresh) {
@@ -1233,6 +1327,9 @@ function initWorld(key, fresh) {
   particles.length = 0; ghosts.length = 0; floats.length = 0;
   initPellets();
   for (let i = 0; i < VIRUS_MIN; i++) spawnVirus();
+  bolts.length = 0; shocks.length = 0;
+  boltMax = Math.max(4, Math.round(WORLD * WORLD / BOLT_AREA));
+  for (let i = 0; i < boltMax; i++) spawnBolt(0);
   human.alive = false; human.cells.length = 0;
   players.push(human);
   for (let i = 0; i < D.bots; i++) {
@@ -1413,6 +1510,7 @@ function eatCell(a, b) {
 
 function killPlayer(v, k, lastMass) {
   v.alive = false;
+  v.boostUntil = 0;
   dbg.kills++;
   v.deaths++; if (k) k.kills++;
   if (v.isBot && k.isBot) dbg.botVsBot++;
@@ -1593,6 +1691,17 @@ function botThink(b) {
   const gl = Math.hypot(gx, gy);
   if (gl > 0) { const fw = 1 / (1 + tm / 1200); fx += (gx / gl) * fw; fy += (gy / gl) * fw; }
 
+  // --- Rayos de poder: si hay uno cerca y no llevo ya el rayo, voy a por él
+  if (!boosted(b) && threat < 0.7) {
+    let bo = null, bd = 650 + big.r * 1.5;
+    for (const o of bolts) {
+      if (o.dead || now < o.born) continue;
+      const d = Math.hypot(o.x - big.x, o.y - big.y);
+      if (d < bd) { bd = d; bo = o; }
+    }
+    if (bo) { const w = (1.6 + b.aggr * 0.6) * (1 - threat) * (1 - bd / (900 + big.r * 1.5)); fx += ((bo.x - big.x) / (bd || 1)) * w; fy += ((bo.y - big.y) / (bd || 1)) * w; }
+  }
+
   // --- Persecución
   if (prey) {
     let lead = smart && SMART.predict ? 0.22 + Math.min(0.28, Math.hypot(prey.x - big.x, prey.y - big.y) / 2600) : 0.15;
@@ -1769,7 +1878,7 @@ function humanActions() {
 function moveCells(p, dt) {
   const cells = p.cells, n = cells.length;
   const damp = Math.exp(-BOOST_K * dt);
-  const mul = p.speedMul;
+  const mul = p.speedMul * (p.boostUntil > now ? BOLT_SPEED : 1);
   for (let i = 0; i < n; i++) {
     const c = cells[i];
     c.px = c.x; c.py = c.y;
@@ -1967,6 +2076,7 @@ function update(dt) {
   ejGrid.clear(); for (const e of ejected) ejGrid.add(e);
 
   collide(dt);
+  updateBolts(dt);
 
   for (const p of players) if (p.cells.length) compact(p.cells);
   compact(ejected);
@@ -2056,6 +2166,7 @@ let kbBase = null;   // tamaño de la ventana al abrirse el teclado (null = tecl
 // el lienzo se queda en negro y los sprites vacíos: se rehacen todos y se vuelve a dibujar.
 function rebuildGraphics() {
   virusSprite = makeVirusSprite(256);
+  boltSprite = makeBoltSprite(160);
   pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
   pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
   pelletSprites = pelletSets[settings.theme];
@@ -2160,6 +2271,32 @@ function drawGrid(L, R, T, B, s) {
 }
 
 let lastFont = '';
+// aura eléctrica de quien lleva el rayo: anillo que late y chispas en zigzag que giran (parpadea al acabarse)
+function drawBoltAura(c, r, s) {
+  const left = c.owner.boostUntil - now;
+  if (left < 2.5 && Math.sin(now * 22) < 0) return;
+  ctx.save();
+  ctx.globalAlpha = 0.55 + Math.sin(now * 12 + c.id) * 0.2;
+  ctx.lineWidth = Math.max(2.5 / s, r * 0.05);
+  ctx.strokeStyle = '#fde047';
+  ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.06 + 4 / s, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = 0.9;
+  ctx.lineWidth = Math.max(1.8 / s, r * 0.03);
+  ctx.strokeStyle = '#fef9c3';
+  const arcs = 3, seg = 6, t = now * 3.2 + c.id;
+  ctx.beginPath();
+  for (let a = 0; a < arcs; a++) {
+    const a0 = t + (a / arcs) * TAU;
+    for (let i = 0; i <= seg; i++) {
+      const ang = a0 + (i / seg) * 0.9, rr = r * (1.08 + (Math.random() - 0.5) * 0.14) + 5 / s;
+      const x = c.x + Math.cos(ang) * rr, y = c.y + Math.sin(ang) * rr;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawCell(c, s) {
   const r = c.dr, p = c.owner, sr = r * s;
   const spd = Math.sqrt(c.mvx * c.mvx + c.mvy * c.mvy);
@@ -2188,6 +2325,7 @@ function drawCell(c, s) {
     ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   }
+  if (p.boostUntil > now) drawBoltAura(c, r, s);
   if (sr > 13) {
     const ns = getNameSprite(p);
     let h = r * 0.5, w = (h * ns.width) / ns.height;
@@ -2240,6 +2378,19 @@ function render() {
     }
   }
 
+  // rayos de poder (flotan, laten y giran un poco)
+  for (const o of bolts) {
+    if (o.dead || now < o.born) continue;
+    const S = BOLT_R * 3.2;
+    if (o.x + S < L || o.x - S > R || o.y + S < T || o.y - S > B) continue;
+    const age = now - o.born, sc = (age < 0.4 ? age / 0.4 : 1) * (1 + Math.sin(now * 4 + o.ph) * 0.08);
+    ctx.save();
+    ctx.translate(o.x, o.y + Math.sin(now * 2.2 + o.ph) * 7);
+    ctx.rotate(Math.sin(now * 1.6 + o.ph) * 0.18);
+    ctx.drawImage(boltSprite, -S * sc / 2, -S * sc / 2, S * sc, S * sc);
+    ctx.restore();
+  }
+
   // masa expulsada
   for (const e of ejected) {
     if (e.x + e.r < L || e.x - e.r > R || e.y + e.r < T || e.y - e.r > B) continue;
@@ -2269,6 +2420,39 @@ function render() {
     if (v.x + r > L && v.x - r < R && v.y + r > T && v.y - r < B) drawList.push(v);
   }
   drawList.sort((a, b) => a.dr - b.dr);
+
+  // estelas del rayo (debajo de las células)
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const c of drawList) {
+    const t = c.trail;
+    if (!t || t.length < 4) continue;
+    const n = t.length / 2, r = c.dr;
+    for (let i = 1; i < n; i++) {
+      const k = i / n;
+      ctx.globalAlpha = 0.32 * k;
+      ctx.strokeStyle = c.owner.color;
+      ctx.lineWidth = r * 1.7 * (0.25 + 0.75 * k);
+      ctx.beginPath(); ctx.moveTo(t[i * 2 - 2], t[i * 2 - 1]);
+      ctx.lineTo(i === n - 1 ? c.x : t[i * 2], i === n - 1 ? c.y : t[i * 2 + 1]); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = Math.max(2 / s, r * 0.16);
+    ctx.beginPath(); ctx.moveTo(t[0], t[1]);
+    for (let i = 1; i < n; i++) ctx.lineTo(t[i * 2], t[i * 2 + 1]);
+    ctx.lineTo(c.x, c.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // anillos eléctricos al coger un rayo
+  for (const sh of shocks) {
+    const k = (now - sh.t0) / 0.6;
+    ctx.globalAlpha = 1 - k;
+    ctx.lineWidth = (8 - k * 6) / s + 4;
+    ctx.strokeStyle = k < 0.5 ? '#fde047' : '#67e8f9';
+    ctx.beginPath(); ctx.arc(sh.x, sh.y, sh.r * (0.3 + k * 1.2), 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   lastFont = '';
@@ -2329,6 +2513,8 @@ function drawMinimap() {
     mctx.fillStyle = theme.mmVirus;
     mctx.fillRect(v.x * k - 1, v.y * k - 1, 2, 2);
   }
+  mctx.fillStyle = '#facc15';
+  for (const o of bolts) if (!o.dead && now >= o.born) mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3);
   for (const p of players) {
     if (!p.alive || p === human) continue;
     const c = biggest(p);
@@ -2400,6 +2586,9 @@ function updateHud(dt) {
     const mr = $('mergeRow'), show = human.alive && human.cells.length > 1;
     if (mr.hidden === show) mr.hidden = !show;
     if (show) $('mergeVal').textContent = left > 0.05 ? fmtTime(Math.ceil(left)) : 'uniéndose…';
+    const br = $('boltRow'), bl = human.alive ? human.boostUntil - now : 0;
+    if (br.hidden === bl > 0) br.hidden = !(bl > 0);
+    if (bl > 0) $('boltVal').textContent = fmtTime(Math.ceil(bl));
   }
   if (mmT <= 0) { mmT = 1 / 20; drawMinimap(); }
 }
@@ -3262,7 +3451,7 @@ setTimeout(hideSplash, 3000);
 
 // acceso de depuración desde la consola
 window.AgarNova = {
-  get state() { return state; }, players, human, stats, viruses, pellets, dbg, settings,
+  get state() { return state; }, players, human, stats, viruses, pellets, bolts, dbg, settings, BOLT_TIME, BOLT_SPEED,
   get now() { return now; },
   get world() { return WORLD; },
   think: botThink, SMART,

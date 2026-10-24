@@ -63,6 +63,13 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   64 colores candidatos se queda con el más distinto de todos los que ya hay en la arena, y estrena otro
   al reaparecer. Ningún bot lleva un color parecido al del jugador. Antes, con colores puramente al azar,
   en Ultra había ~220 parejas casi idénticas; ahora ninguna (también en partidas normales).
+- **Rayos de poder ⚡:** por el mapa hay rayos que flotan y brillan (8 en los mapas normales, 44 en
+  Ultra; también salen en el minimapa). El jugador o el bot que toque uno va **1,5 veces más rápido durante
+  15 s**, con una estela de su color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al
+  cogerlo y, para el jugador, sonido, vibración y la cuenta atrás «⚡ Rayo 0:15» en el panel izquierdo.
+  Coger otro mientras dura reinicia los 15 s. El rayo reaparece en otro sitio al rato y los bots van a por
+  los que tienen cerca.
+- **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
 - **Movimiento de los bots más suave:** giran con inercia en vez de cambiar de rumbo en seco (el giro medio
