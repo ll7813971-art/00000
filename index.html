@@ -311,7 +311,19 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 #stats .srow div{display:flex;flex-direction:column}
 #stats .srow b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
 #mergeRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-#mergeRow[hidden],#boltRow[hidden]{display:none}
+#mergeRow[hidden],#boltRow[hidden],#bombRow[hidden]{display:none}
+#bombRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:800;color:#f87171;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+#bombRow.hit{animation:bombBlink .5s steps(1) infinite}
+@keyframes bombBlink{50%{color:#fde047}}
+#bombBtn{position:absolute;display:none;align-items:center;justify-content:center;gap:8px;pointer-events:auto;color:#fff;font-weight:900;letter-spacing:.08em;border:2px solid rgba(255,255,255,.4);
+  background:radial-gradient(circle at 35% 30%,#fb923c,#dc2626 60%,#7f1d1d);box-shadow:0 10px 28px rgba(220,38,38,.45),inset 0 2px 0 rgba(255,255,255,.3);touch-action:none;-webkit-user-select:none;user-select:none;animation:bombGlow 1s ease-in-out infinite;transition:filter .08s}
+#bombBtn.show{display:flex}
+#bombBtn.press{filter:brightness(1.3)}
+#bombBtn kbd{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.4);color:#fff}
+@keyframes bombGlow{50%{box-shadow:0 10px 34px rgba(249,115,22,.75),inset 0 2px 0 rgba(255,255,255,.3)}}
+body:not(.touch) #bombBtn{left:50%;bottom:calc(66px + var(--sb));margin-left:-92px;width:184px;height:50px;border-radius:999px;font-size:14px}
+body.touch #bombBtn{right:calc(24px + var(--sr));bottom:calc(126px + var(--sb));width:74px;height:74px;border-radius:50%;flex-direction:column;gap:1px;font-size:9.5px}
+body.touch #bombBtn kbd{display:none}
 #boltRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:800;color:#facc15;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;animation:boltPulse 1s ease-in-out infinite}
 #boltRow b{font-size:13px;font-variant-numeric:tabular-nums;color:var(--text)}
 @keyframes boltPulse{50%{text-shadow:0 0 10px rgba(250,204,21,.7)}}
@@ -511,6 +523,7 @@ body.touch .only-pc{display:none}
       </div>
       <div id="mergeRow" hidden><span>Unión en</span> <b id="mergeVal">0:30</b></div>
       <div id="boltRow" hidden><span>⚡ Rayo</span> <b id="boltVal">0:15</b></div>
+      <div id="bombRow" hidden><span id="bombTxt">💣 Bomba lista</span></div>
     </div>
     <div id="subRow">
       <div id="minimapWrap" class="glass"><canvas id="minimap" aria-label="Minimapa"></canvas></div>
@@ -529,10 +542,12 @@ body.touch .only-pc{display:none}
     <span><kbd>Ratón</kbd> moverse</span>
     <span><kbd>Espacio</kbd> dividir</span>
     <span><kbd>W</kbd> expulsar</span>
+    <span><kbd>E</kbd> bomba</span>
     <span><kbd>Rueda</kbd> zoom</span>
     <span><kbd>Esc</kbd> pausa</span>
   </div>
   <div id="fps"></div>
+  <button id="bombBtn" aria-label="Lanzar bomba"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#111827" stroke="#fff" stroke-width="1.6"/><path d="M20 10q3-6 8-6" stroke="#fde68a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="4" r="2.6" fill="#fde047"/><circle cx="10.5" cy="15" r="2.4" fill="rgba(255,255,255,.5)"/></svg><span>LANZAR</span><kbd>E</kbd></button>
   <div id="touch">
     <button id="btnEject" class="tbtn" aria-label="Expulsar masa">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5c3.6 4.4 6.5 8 6.5 11.4A6.5 6.5 0 0 1 5.5 13.9C5.5 10.5 8.4 6.9 12 2.5z"/></svg>
@@ -816,7 +831,11 @@ const splitDistOf = r => 360 + r * 0.7;
 const BOLT_SPEED = 1.5;      // poder del rayo: velocidad x1.5…
 const BOLT_TIME = 15;        // …durante 15 segundos
 const BOLT_R = 48;           // radio del rayo en el mapa
-const BOLT_AREA = 4.5e6;     // un rayo por cada 4,5 millones de px² (8 en el mapa normal, ~44 en Ultra)
+const BOLT_AREA = 4.5e6;     // un hueco de poder por cada 4,5 millones de px² (8 en el mapa normal, ~44 en Ultra)
+const BOLT_CHANCE = 0.30;    // cada hueco, al tirar, sale rayo con un 30 %…
+const BOMB_CHANCE = 0.19;    // …bomba con un 19 % (y si no, nada: vuelve a probar a los 4 s)
+const BOMB_R = 44;           // radio de la bomba en el mapa
+const BOMB_FUSE = 3;         // segundos que tarda en explotar la célula alcanzada
 const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
 const mergeTimeOf = m => MERGE_TIME;
 
@@ -973,6 +992,41 @@ function makeBoltSprite(S) {
   return cv;
 }
 let boltSprite = makeBoltSprite(160);
+const BOMB_TIP = [0.80, 0.13];   // punta de la mecha (para la chispa animada)
+function makeBombSprite(S) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const halo = g.createRadialGradient(S * 0.47, S * 0.6, S * 0.2, S * 0.47, S * 0.6, S * 0.5);
+  halo.addColorStop(0, 'rgba(239,68,68,0.38)'); halo.addColorStop(1, 'rgba(239,68,68,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, S, S);
+  // mecha
+  g.beginPath(); g.moveTo(S * 0.62, S * 0.3); g.quadraticCurveTo(S * 0.72, S * 0.1, BOMB_TIP[0] * S, BOMB_TIP[1] * S);
+  g.lineWidth = S * 0.04; g.lineCap = 'round'; g.strokeStyle = '#d6a35c'; g.stroke();
+  // boquilla
+  g.save(); g.translate(S * 0.6, S * 0.33); g.rotate(0.65);
+  g.fillStyle = '#9ca3af'; g.fillRect(-S * 0.07, -S * 0.05, S * 0.14, S * 0.11);
+  g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(-S * 0.07, -S * 0.05, S * 0.14, S * 0.03);
+  g.restore();
+  // cuerpo
+  const cx = S * 0.46, cy = S * 0.6, R = S * 0.31;
+  const body = g.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R);
+  body.addColorStop(0, '#6b7280'); body.addColorStop(0.45, '#1f2937'); body.addColorStop(1, '#050608');
+  g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fillStyle = body; g.fill();
+  g.lineWidth = S * 0.018; g.strokeStyle = 'rgba(255,255,255,0.55)'; g.stroke();
+  g.beginPath(); g.ellipse(cx - R * 0.38, cy - R * 0.42, R * 0.22, R * 0.12, -0.6, 0, TAU);
+  g.fillStyle = 'rgba(255,255,255,0.45)'; g.fill();
+  return cv;
+}
+let bombSprite = makeBombSprite(160);
+// chispa de la mecha (animada) para una bomba dibujada en (x, y) con tamaño S
+function drawSpark(x, y, S) {
+  const sx = x + (BOMB_TIP[0] - 0.5) * S, sy = y + (BOMB_TIP[1] - 0.5) * S, f = 0.7 + Math.random() * 0.6;
+  ctx.fillStyle = 'rgba(253,186,116,0.55)';
+  ctx.beginPath(); ctx.arc(sx, sy, S * 0.1 * f, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#fff7cc';
+  ctx.beginPath(); ctx.arc(sx, sy, S * 0.045 * f, 0, TAU); ctx.fill();
+}
 const pelletSets = { dark: PELLET_COLORS.map(c => makePelletSprite(c, false)), light: PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true)) };
 let pelletSprites = pelletSets.dark;
 const PELLET_DRAW = 48 / 11; // tamaño del sprite / radio del núcleo
@@ -1022,6 +1076,11 @@ const Sound = {
   setVolume(v) { this.vol = v; if (this.master) this.master.gain.value = VOL_GAIN * v; },
   power() { this.tone(260, 1900, 0.28, 'sawtooth', 0.07); this.tone(900, 2600, 0.16, 'square', 0.025, 0.05); this.tone(1500, 3200, 0.12, 'sine', 0.05, 0.12); },
   powerEnd() { this.tone(900, 260, 0.3, 'triangle', 0.06); },
+  bombPick() { this.tone(180, 520, 0.12, 'square', 0.04); this.tone(520, 300, 0.1, 'triangle', 0.04, 0.1); },
+  bombThrow() { this.tone(900, 180, 0.22, 'sawtooth', 0.05); },
+  bombHit() { this.tone(300, 120, 0.12, 'square', 0.06); },
+  tick(n) { this.tone(n <= 1 ? 1900 : 1400, n <= 1 ? 1900 : 1400, 0.06, 'square', 0.035); },
+  boom() { this.tone(140, 30, 0.75, 'sawtooth', 0.16); this.tone(70, 25, 0.95, 'triangle', 0.16); this.tone(420, 60, 0.4, 'square', 0.05, 0.02); },
   start() { [0, 0.09, 0.18].forEach((d, i) => this.tone(440 * (1 + i * 0.26), 880 * (1 + i * 0.26), 0.12, 'sine', 0.05, d)); }
 };
 
@@ -1071,6 +1130,8 @@ class Player {
     this.tx = 0; this.ty = 0;
     this.speedMul = 1;
     this.boostUntil = 0;                  // rayo: velocidad x1.5 hasta este momento
+    this.bomb = false;                    // lleva una bomba lista para lanzar
+    this.bombSince = 0; this.nextBombCheck = 0;
     this.nextEject = 0;
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
@@ -1105,6 +1166,10 @@ class Cell {
     this.ha = NaN;                                  // rumbo suavizado de las células de los bots (radianes)
     this.born = now;
     this.dead = false;
+    // poderes: se declaran aquí (aunque casi siempre estén vacíos) para que todas las células tengan la misma
+    // forma interna; añadirlos sobre la marcha volvía el juego 3 veces más lento en Ultra
+    this.bombAt = 0; this.bombBy = null; this.bombSec = 0;   // bomba pegada: explota en bombAt
+    this.trail = null; this.trailT = 0;                      // estela del rayo
   }
 }
 
@@ -1120,9 +1185,12 @@ const ejected = [];
 const particles = [];
 const ghosts = [];
 const floats = [];
-const bolts = [];          // rayos de poder en el mapa
-const shocks = [];         // anillos eléctricos al recoger un rayo
-let boltMax = 8;
+const powers = [];         // poderes en el mapa: { type: 'bolt' | 'bomb' }
+const shocks = [];         // anillos al recoger un poder
+const thrown = [];         // bombas lanzadas en vuelo
+const booms = [];          // explosiones (animación)
+let powerSlots = 8, nextPowerRoll = 0;
+let shakeT = 0, shakeA = 0; // temblor de cámara
 let cellGrid = new Grid(300);
 let ejGrid = new Grid(300);
 const qBufA = [], qBufB = [], qBufC = [], eatenBuf = [], botCT = [];
@@ -1195,45 +1263,163 @@ function spawnVirus(x, y, vx, vy) {
   viruses.push({ isVirus: true, x, y, vx: vx || 0, vy: vy || 0, m: VIRUS_MASS, r, dr: r, feed: 0, rot: Math.random() * TAU, dead: false });
 }
 
-/* ---------- Rayos de poder ---------- */
-function spawnBolt(delay) {
+/* ---------- Poderes: rayo y bomba ---------- */
+function rollPower() { const r = Math.random(); return r < BOLT_CHANCE ? 'bolt' : r < BOLT_CHANCE + BOMB_CHANCE ? 'bomb' : null; }
+function spawnPower(type) {
   let x = 0, y = 0;
   for (let t = 0; t < 20; t++) {
     x = rand(200, WORLD - 200); y = rand(200, WORLD - 200);
     let ok = true;
     for (const v of viruses) if (Math.hypot(v.x - x, v.y - y) < v.r + 160) { ok = false; break; }
-    if (ok) for (const o of bolts) if (Math.hypot(o.x - x, o.y - y) < 900) { ok = false; break; }
+    if (ok) for (const o of powers) if (Math.hypot(o.x - x, o.y - y) < 900) { ok = false; break; }
     if (ok) break;
   }
-  bolts.push({ x, y, born: now + (delay || 0), ph: Math.random() * TAU, dead: false });
+  powers.push({ type, x, y, born: now, ph: Math.random() * TAU, dead: false });
 }
 function boosted(p) { return p.boostUntil > now; }
-function pickBolt(o, c) {
+function pickPower(o, c) {
   const p = c.owner;
   o.dead = true;
-  p.boostUntil = now + BOLT_TIME;                  // recoger otro mientras dura reinicia los 15 s
-  shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(80, c.r * 1.6) });
-  burst(o.x, o.y, '#fde047', 18, 40); burst(o.x, o.y, '#67e8f9', 8, 30);
-  if (p === human) {
-    Sound.power(); vibrate([15, 30, 25]);
-    addFloat(c.x, c.y - c.r - 30, '⚡ ¡Velocidad x1.5!');
+  if (o.type === 'bolt') {
+    p.boostUntil = now + BOLT_TIME;                  // recoger otro mientras dura reinicia los 15 s
+    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(80, c.r * 1.6), col: '#fde047' });
+    burst(o.x, o.y, '#fde047', 18, 40); burst(o.x, o.y, '#67e8f9', 8, 30);
+    if (p === human) { Sound.power(); vibrate([15, 30, 25]); addFloat(c.x, c.y - c.r - 30, '⚡ ¡Velocidad x1.5!'); }
+    dbg.bolts = (dbg.bolts || 0) + 1;
+  } else {
+    p.bomb = true;                                    // la bomba se queda en el centro de tu célula
+    p.bombSince = now;
+    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(70, c.r * 1.3), col: '#f87171' });
+    burst(o.x, o.y, '#f97316', 12, 30);
+    if (p === human) { Sound.bombPick(); vibrate(20); addFloat(c.x, c.y - c.r - 30, inputMode === 'touch' ? '💣 ¡Bomba! Pulsa LANZAR' : '💣 ¡Bomba! Pulsa E'); }
+    dbg.bombsPicked = (dbg.bombsPicked || 0) + 1;
   }
-  dbg.bolts = (dbg.bolts || 0) + 1;
 }
-function updateBolts(dt) {
-  // recoger: basta con que la célula toque el rayo
-  for (const o of bolts) {
-    if (o.dead || now < o.born) continue;
+// lanza la bomba hacia donde mira el jugador (o hacia el punto ax, ay)
+function throwBomb(p, ax, ay) {
+  if (!p.bomb || !p.alive || !p.cells.length) return false;
+  const c = biggest(p);
+  let dx, dy;
+  if (ax !== undefined) { dx = ax - c.x; dy = ay - c.y; }
+  else if (p === human && inputMode === 'touch') { dx = human.lastDx || 0; dy = human.lastDy || 0; if (!dx && !dy) dx = 1; }
+  else { dx = p.tx - c.x; dy = p.ty - c.y; }
+  let d = Math.hypot(dx, dy);
+  if (d < 1) { dx = 1; dy = 0; d = 1; }
+  const nx = dx / d, ny = dy / d, sp = 1500 + c.r * 1.6;
+  p.bomb = false;
+  thrown.push({ x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, dead: false });
+  if (p === human) { Sound.bombThrow(); vibrate(12); }
+  dbg.bombsThrown = (dbg.bombsThrown || 0) + 1;
+  return true;
+}
+// la célula alcanzada estalla en mini células (si ya tiene 16 piezas, suelta masa en bolitas)
+function explodeCell(c) {
+  const p = c.owner;
+  c.bombAt = 0;
+  booms.push({ x: c.x, y: c.y, t0: now, r: Math.max(60, c.r) });
+  burst(c.x, c.y, '#f97316', 26, c.r * 0.4); burst(c.x, c.y, '#ef4444', 18, c.r * 0.3); burst(c.x, c.y, '#fde047', 10, c.r * 0.2);
+  const near = human.alive && Math.hypot(c.x - cam.x, c.y - cam.y) < (vw + vh) / cam.s;
+  if (p === human || c.bombBy === human || near) { Sound.boom(); shakeT = 0.45; shakeA = Math.min(26, 8 + c.r * 0.05); }
+  if (p === human) { vibrate([60, 40, 90]); addFloat(c.x, c.y - c.r - 30, '💥 ¡BOOM!'); }
+  let alive = 0;
+  for (const o of p.cells) if (!o.dead) alive++;
+  const pieces = Math.min(MAX_CELLS - alive, 15, Math.floor(c.mass / 12) - 1);
+  if (pieces >= 1) {
+    const pm = c.mass / (pieces + 1), base = Math.random() * TAU;
+    c.mass = pm; c.r = radiusOf(pm);
+    for (let i = 0; i < pieces; i++) {
+      const a = base + (i / pieces) * TAU + rand(-0.2, 0.2);
+      const n = new Cell(p, c.x, c.y, pm);
+      n.dr = n.r * 0.5;
+      const dist = rand(0.75, 1.2) * (240 + c.r * 2.2);
+      n.vx = Math.cos(a) * dist * BOOST_K; n.vy = Math.sin(a) * dist * BOOST_K;
+      p.cells.push(n);
+    }
+    const a = Math.random() * TAU; c.vx += Math.cos(a) * 200; c.vy += Math.sin(a) * 200;
+  } else {
+    const n = Math.min(24, Math.floor((c.mass * 0.4) / EJECT_MASS));
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + rand(-0.2, 0.2), nx = Math.cos(a), ny = Math.sin(a);
+      c.mass -= EJECT_MASS;
+      ejected.push({ x: clamp(c.x + nx * c.r * 0.8, 0, WORLD), y: clamp(c.y + ny * c.r * 0.8, 0, WORLD), vx: nx * rand(900, 1500), vy: ny * rand(900, 1500), dx: nx, dy: ny, m: EJECT_MASS, r: 19, owner: p, born: now, dead: false });
+    }
+    c.r = radiusOf(c.mass);
+  }
+  resetMerge(p);
+  p.protectUntil = 0;
+  dbg.booms = (dbg.booms || 0) + 1;
+}
+function botBomb(b) {
+  if (now < (b.nextBombCheck || 0) || now - b.bombSince < 0.6) return;
+  b.nextBombCheck = now + 0.25;
+  const big = biggest(b);
+  if (!big) return;
+  const range = 900 + big.r * 1.2, sp = 1500 + big.r * 1.6;
+  let best = null, bestS = 0;
+  for (const c of allCells) {
+    if (c.owner === b || c.dead || c.bombAt || c.owner.protectUntil > now || c.mass < 30) continue;
+    const d = Math.hypot(c.x - big.x, c.y - big.y) - big.r;
+    if (d > range) continue;
+    const sc = (c.mass / (big.mass + 50)) * (1 + (c.mass > big.mass * 0.9 ? 1.5 : 0)) / (d + 300);   // prefiere a los grandes y peligrosos
+    if (sc > bestS) { bestS = sc; best = c; }
+  }
+  if (!best) { if (now - b.bombSince > 25) throwBomb(b, big.x + rand(-1, 1), big.y + rand(-1, 1)); return; }
+  const t = Math.hypot(best.x - big.x, best.y - big.y) / sp;
+  throwBomb(b, best.x + best.mvx * t, best.y + best.mvy * t);
+}
+function updatePowers(dt) {
+  // recoger: basta con que la célula toque el poder (una bomba solo si no llevas ya otra)
+  for (const o of powers) {
+    if (o.dead) continue;
+    const pr = o.type === 'bolt' ? BOLT_R : BOMB_R;
     for (const c of allCells) {
-      const lim = c.r + BOLT_R * 0.6, dx = c.x - o.x, dy = c.y - o.y;
+      if (o.type === 'bomb' && c.owner.bomb) continue;
+      const lim = c.r + pr * 0.6, dx = c.x - o.x, dy = c.y - o.y;
       if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
-      if (dx * dx + dy * dy < lim * lim) { pickBolt(o, c); break; }
+      if (dx * dx + dy * dy < lim * lim) { pickPower(o, c); break; }
     }
   }
-  let alive = 0;
-  for (let i = bolts.length - 1; i >= 0; i--) { if (bolts[i].dead) bolts.splice(i, 1); else alive++; }
-  while (alive < boltMax) { spawnBolt(rand(6, 14)); alive++; }   // vuelven a salir en otro sitio al rato
+  for (let i = powers.length - 1; i >= 0; i--) if (powers[i].dead) powers.splice(i, 1);
+  if (now >= nextPowerRoll) {                       // los huecos libres vuelven a tirar cada 4 s
+    nextPowerRoll = now + 4;
+    for (let i = powers.length; i < powerSlots; i++) { const t = rollPower(); if (t) spawnPower(t); }
+  }
+  // bombas en vuelo
+  const damp = Math.exp(-1.25 * dt);
+  for (const t of thrown) {
+    if (t.dead) continue;
+    t.x += t.vx * dt; t.y += t.vy * dt; t.vx *= damp; t.vy *= damp; t.rot += dt * 9;
+    if (t.x < 0 || t.y < 0 || t.x > WORLD || t.y > WORLD || now - t.born > 1.7) {   // no tocó a nadie: se apaga
+      t.dead = true; burst(clamp(t.x, 0, WORLD), clamp(t.y, 0, WORLD), '#9ca3af', 8, 10); continue;
+    }
+    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: 'rgba(160,160,170,0.8)' });
+    for (const c of allCells) {
+      if (c.owner === t.owner || c.dead || c.bombAt || c.owner.protectUntil > now) continue;
+      const lim = c.r + BOMB_R * 0.5, dx = c.x - t.x, dy = c.y - t.y;
+      if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
+      if (dx * dx + dy * dy < lim * lim) {
+        t.dead = true;
+        c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
+        shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
+        burst(t.x, t.y, '#ef4444', 10, 20);
+        if (c.owner === human) { Sound.bombHit(); vibrate([30, 30, 30]); }
+        else if (t.owner === human) Sound.bombHit();
+        break;
+      }
+    }
+  }
+  for (let i = thrown.length - 1; i >= 0; i--) if (thrown[i].dead) thrown.splice(i, 1);
+  // células con la bomba pegada: tic-tac y explosión
+  for (const c of allCells) {
+    if (!c.bombAt) continue;
+    const left = c.bombAt - now;
+    if (left <= 0) { explodeCell(c); continue; }
+    const sec = Math.ceil(left);
+    if (sec !== c.bombSec) { c.bombSec = sec; if (c.owner === human || c.bombBy === human) Sound.tick(sec); }
+  }
   for (let i = shocks.length - 1; i >= 0; i--) if (now - shocks[i].t0 > 0.6) shocks.splice(i, 1);
+  for (let i = booms.length - 1; i >= 0; i--) if (now - booms[i].t0 > 0.7) booms.splice(i, 1);
+  if (shakeT > 0) shakeT -= dt;
   // estela de quien va con el rayo
   for (const c of allCells) {
     if (boosted(c.owner)) {
@@ -1313,6 +1499,7 @@ function spawnPlayer(p, mass) {
   p.shoot = null;
   p.protectUntil = now + SPAWN_SHIELD;
   p.boostUntil = 0;
+  p.bomb = false;
 }
 
 function initWorld(key, fresh) {
@@ -1327,9 +1514,10 @@ function initWorld(key, fresh) {
   particles.length = 0; ghosts.length = 0; floats.length = 0;
   initPellets();
   for (let i = 0; i < VIRUS_MIN; i++) spawnVirus();
-  bolts.length = 0; shocks.length = 0;
-  boltMax = Math.max(4, Math.round(WORLD * WORLD / BOLT_AREA));
-  for (let i = 0; i < boltMax; i++) spawnBolt(0);
+  powers.length = 0; shocks.length = 0; thrown.length = 0; booms.length = 0;
+  powerSlots = Math.max(4, Math.round(WORLD * WORLD / BOLT_AREA));
+  for (let i = 0; i < powerSlots; i++) for (let k = 0; k < 3; k++) { const t = rollPower(); if (t) { spawnPower(t); break; } }
+  nextPowerRoll = now + 4;
   human.alive = false; human.cells.length = 0;
   players.push(human);
   for (let i = 0; i < D.bots; i++) {
@@ -1511,6 +1699,7 @@ function eatCell(a, b) {
 function killPlayer(v, k, lastMass) {
   v.alive = false;
   v.boostUntil = 0;
+  v.bomb = false;
   dbg.kills++;
   v.deaths++; if (k) k.kills++;
   if (v.isBot && k.isBot) dbg.botVsBot++;
@@ -1691,11 +1880,11 @@ function botThink(b) {
   const gl = Math.hypot(gx, gy);
   if (gl > 0) { const fw = 1 / (1 + tm / 1200); fx += (gx / gl) * fw; fy += (gy / gl) * fw; }
 
-  // --- Rayos de poder: si hay uno cerca y no llevo ya el rayo, voy a por él
-  if (!boosted(b) && threat < 0.7) {
+  // --- Poderes: si hay uno cerca que no lleve ya (rayo o bomba), voy a por él
+  if (threat < 0.7 && (!boosted(b) || !b.bomb)) {
     let bo = null, bd = 650 + big.r * 1.5;
-    for (const o of bolts) {
-      if (o.dead || now < o.born) continue;
+    for (const o of powers) {
+      if (o.dead || (o.type === 'bolt' ? boosted(b) : b.bomb)) continue;
       const d = Math.hypot(o.x - big.x, o.y - big.y);
       if (d < bd) { bd = d; bo = o; }
     }
@@ -1872,6 +2061,7 @@ function humanActions() {
     human.speedMul = 1;
   }
   while (input.split > 0) { input.split--; splitPlayer(human); }
+  if (input.throw) { input.throw = false; throwBomb(human); }
   if (input.eject && now >= human.nextEject) { eject(human); human.nextEject = now + 0.075; }
 }
 
@@ -2016,6 +2206,7 @@ function collide(dt) {
       if (b.owner === a.owner) {
         if (now >= a.mergeAt && now >= b.mergeAt && d < a.r - b.r * 0.3) {
           a.mass += b.mass; a.r = radiusOf(a.mass); b.dead = true;
+          if (b.bombAt && !a.bombAt) { a.bombAt = b.bombAt; a.bombBy = b.bombBy; }   // la bomba no se escapa uniéndose
         }
       } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
         if (d < a.r - b.r * EAT_COVER) eatCell(a, b);
@@ -2063,6 +2254,7 @@ function update(dt) {
     if (p.isBot) {
       if (now >= p.nextThink) botThink(p);
       botActions(p);
+      if (p.bomb) botBomb(p);
     }
   }
   if (human.alive) humanActions();
@@ -2076,7 +2268,7 @@ function update(dt) {
   ejGrid.clear(); for (const e of ejected) ejGrid.add(e);
 
   collide(dt);
-  updateBolts(dt);
+  updatePowers(dt);
 
   for (const p of players) if (p.cells.length) compact(p.cells);
   compact(ejected);
@@ -2167,6 +2359,7 @@ let kbBase = null;   // tamaño de la ventana al abrirse el teclado (null = tecl
 function rebuildGraphics() {
   virusSprite = makeVirusSprite(256);
   boltSprite = makeBoltSprite(160);
+  bombSprite = makeBombSprite(160);
   pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
   pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
   pelletSprites = pelletSets[settings.theme];
@@ -2297,6 +2490,28 @@ function drawBoltAura(c, r, s) {
   ctx.restore();
 }
 
+// aura roja y cuenta atrás (3, 2, 1) de una célula con la bomba pegada
+function drawBombAura(c, r, s) {
+  const left = c.bombAt - now, sec = Math.max(1, Math.ceil(left)), f = left - Math.floor(left);
+  const beat = 0.5 + 0.5 * Math.sin(now * (10 + (3 - left) * 6));
+  ctx.save();
+  const g = ctx.createRadialGradient(c.x, c.y, r * 0.75, c.x, c.y, r * 1.45);
+  g.addColorStop(0, 'rgba(239,68,68,0)'); g.addColorStop(0.5, `rgba(239,68,68,${0.25 + beat * 0.3})`); g.addColorStop(1, 'rgba(239,68,68,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.45, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 0.6 + beat * 0.4;
+  ctx.lineWidth = Math.max(3 / s, r * 0.06); ctx.strokeStyle = '#ef4444';
+  ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.04 + 4 / s, 0, TAU); ctx.stroke();
+  // número grande encima de la célula, con un pequeño «salto» cada segundo
+  const fs = Math.max(22 / s, r * 0.55) * (1 + (f > 0.8 ? (f - 0.8) * 2.5 : 0));
+  ctx.globalAlpha = 1;
+  ctx.font = `900 ${Math.round(fs)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = fs * 0.16; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  const ty = c.y - r - fs * 0.6;
+  ctx.strokeText(String(sec), c.x, ty); ctx.fillStyle = '#f87171'; ctx.fillText(String(sec), c.x, ty);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
+}
+
 function drawCell(c, s) {
   const r = c.dr, p = c.owner, sr = r * s;
   const spd = Math.sqrt(c.mvx * c.mvx + c.mvy * c.mvy);
@@ -2326,6 +2541,14 @@ function drawCell(c, s) {
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   }
   if (p.boostUntil > now) drawBoltAura(c, r, s);
+  if (c.bombAt) drawBombAura(c, r, s);
+  if (p.bomb && c === biggest(p)) {               // la bomba que llevas, en el centro de tu célula
+    const S = Math.max(30 / s, r * 1.25);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(Math.sin(now * 3) * 0.15);
+    ctx.drawImage(bombSprite, -S / 2, -S / 2, S, S); drawSpark(0, 0, S);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
+  }
   if (sr > 13) {
     const ns = getNameSprite(p);
     let h = r * 0.5, w = (h * ns.width) / ns.height;
@@ -2352,7 +2575,8 @@ function render() {
 
   const hw = vw / 2 / s, hh = vh / 2 / s;
   const L = cam.x - hw, R = cam.x + hw, T = cam.y - hh, B = cam.y + hh;
-  ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * (vw / 2 - cam.x * s), dpr * (vh / 2 - cam.y * s));
+  const shx = shakeT > 0 ? (Math.random() - 0.5) * shakeA * shakeT * 2.2 : 0, shy = shakeT > 0 ? (Math.random() - 0.5) * shakeA * shakeT * 2.2 : 0;
+  ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * (vw / 2 - cam.x * s + shx), dpr * (vh / 2 - cam.y * s + shy));
 
   // arena
   ctx.fillStyle = theme.arena;
@@ -2378,16 +2602,17 @@ function render() {
     }
   }
 
-  // rayos de poder (flotan, laten y giran un poco)
-  for (const o of bolts) {
-    if (o.dead || now < o.born) continue;
-    const S = BOLT_R * 3.2;
+  // poderes: rayos y bombas (flotan, laten y se balancean)
+  for (const o of powers) {
+    if (o.dead) continue;
+    const bomb = o.type === 'bomb', S = bomb ? BOMB_R * 2.9 : BOLT_R * 3.2;
     if (o.x + S < L || o.x - S > R || o.y + S < T || o.y - S > B) continue;
     const age = now - o.born, sc = (age < 0.4 ? age / 0.4 : 1) * (1 + Math.sin(now * 4 + o.ph) * 0.08);
     ctx.save();
     ctx.translate(o.x, o.y + Math.sin(now * 2.2 + o.ph) * 7);
-    ctx.rotate(Math.sin(now * 1.6 + o.ph) * 0.18);
-    ctx.drawImage(boltSprite, -S * sc / 2, -S * sc / 2, S * sc, S * sc);
+    ctx.rotate(Math.sin(now * 1.6 + o.ph) * (bomb ? 0.12 : 0.18));
+    ctx.drawImage(bomb ? bombSprite : boltSprite, -S * sc / 2, -S * sc / 2, S * sc, S * sc);
+    if (bomb) drawSpark(0, 0, S * sc);
     ctx.restore();
   }
 
@@ -2444,15 +2669,23 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
-  // anillos eléctricos al coger un rayo
+  // anillos al coger un poder o al recibir una bomba
   for (const sh of shocks) {
     const k = (now - sh.t0) / 0.6;
     ctx.globalAlpha = 1 - k;
     ctx.lineWidth = (8 - k * 6) / s + 4;
-    ctx.strokeStyle = k < 0.5 ? '#fde047' : '#67e8f9';
+    ctx.strokeStyle = sh.col === '#fde047' && k >= 0.5 ? '#67e8f9' : sh.col;
     ctx.beginPath(); ctx.arc(sh.x, sh.y, sh.r * (0.3 + k * 1.2), 0, TAU); ctx.stroke();
   }
   ctx.globalAlpha = 1;
+  // bombas en vuelo (giran y echan humo)
+  for (const t of thrown) {
+    const S = BOMB_R * 2.6;
+    if (t.x + S < L || t.x - S > R || t.y + S < T || t.y - S > B) continue;
+    ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.rot);
+    ctx.drawImage(bombSprite, -S / 2, -S / 2, S, S); drawSpark(0, 0, S);
+    ctx.restore();
+  }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   lastFont = '';
@@ -2477,6 +2710,20 @@ function render() {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 - k * 0.5), 0, TAU); ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // explosiones: bola de fuego que crece, destello y onda
+  for (const bm of booms) {
+    const k = (now - bm.t0) / 0.7, R0 = bm.r * (0.6 + k * 1.9);
+    const g = ctx.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, R0);
+    g.addColorStop(0, `rgba(255,250,220,${0.95 * (1 - k)})`); g.addColorStop(0.35, `rgba(253,186,116,${0.85 * (1 - k)})`);
+    g.addColorStop(0.7, `rgba(239,68,68,${0.55 * (1 - k)})`); g.addColorStop(1, 'rgba(127,29,29,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(bm.x, bm.y, R0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = Math.max(0, 1 - k * 1.3);
+    ctx.lineWidth = Math.max(3 / s, bm.r * 0.06); ctx.strokeStyle = '#fed7aa';
+    ctx.beginPath(); ctx.arc(bm.x, bm.y, bm.r * (0.8 + k * 2.6), 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 
   // textos flotantes
   if (floats.length) {
@@ -2513,8 +2760,7 @@ function drawMinimap() {
     mctx.fillStyle = theme.mmVirus;
     mctx.fillRect(v.x * k - 1, v.y * k - 1, 2, 2);
   }
-  mctx.fillStyle = '#facc15';
-  for (const o of bolts) if (!o.dead && now >= o.born) mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3);
+  for (const o of powers) { if (o.dead) continue; mctx.fillStyle = o.type === 'bolt' ? '#facc15' : '#f87171'; mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3); }
   for (const p of players) {
     if (!p.alive || p === human) continue;
     const c = biggest(p);
@@ -2589,6 +2835,14 @@ function updateHud(dt) {
     const br = $('boltRow'), bl = human.alive ? human.boostUntil - now : 0;
     if (br.hidden === bl > 0) br.hidden = !(bl > 0);
     if (bl > 0) $('boltVal').textContent = fmtTime(Math.ceil(bl));
+    // bomba: lista para lanzar, o pegada a una de tus células (cuenta atrás)
+    let hit = 0;
+    if (human.alive) for (const c of human.cells) if (c.bombAt) hit = Math.max(hit, c.bombAt - now);
+    const bRow = $('bombRow'), bShow = human.alive && (human.bomb || hit > 0);
+    if (bRow.hidden === bShow) bRow.hidden = !bShow;
+    if (bShow) { bRow.classList.toggle('hit', hit > 0); $('bombTxt').textContent = hit > 0 ? '💥 ¡Bomba! Explota en ' + Math.ceil(hit) : (inputMode === 'touch' ? '💣 Bomba · pulsa LANZAR' : '💣 Bomba · pulsa E'); }
+    const bb = $('bombBtn'), bOn = state === 'playing' && human.alive && human.bomb;
+    if (bb.classList.contains('show') !== bOn) bb.classList.toggle('show', bOn);
   }
   if (mmT <= 0) { mmT = 1 / 20; drawMinimap(); }
 }
@@ -2775,7 +3029,7 @@ function updateLifetime() {
 /* =====================================================================
    ENTRADA: RATÓN, TECLADO, TÁCTIL
    ===================================================================== */
-const input = { mx: window.innerWidth / 2, my: window.innerHeight / 2, split: 0, eject: false, joy: null };
+const input = { mx: window.innerWidth / 2, my: window.innerHeight / 2, split: 0, eject: false, throw: false, joy: null };
 let inputMode = 'mouse';
 function setInputMode(m) {
   if (inputMode === m) return;
@@ -2818,6 +3072,7 @@ canvas.addEventListener('pointerdown', e => {
 
 window.addEventListener('pointermove', e => {
   if (e.pointerType === 'mouse') {
+    if (e.target && e.target.closest && e.target.closest('#bombBtn')) return;   // al ir al botón no se cambia la puntería
     input.mx = e.clientX; input.my = e.clientY;
     if (inputMode !== 'mouse' && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 2) setInputMode('mouse');
   } else if (input.joy && e.pointerId === input.joy.id) {
@@ -2850,6 +3105,7 @@ function bindHold(btn, down, up) {
   btn.addEventListener('lostpointercapture', rel);
   btn.addEventListener('contextmenu', e => e.preventDefault());
 }
+bindHold($('bombBtn'), () => { if (state === 'playing') input.throw = true; });
 bindHold($('btnSplit'), () => { if (state === 'playing') input.split = Math.min(4, input.split + 1); });
 bindHold($('btnEject'), () => { if (state === 'playing') input.eject = true; }, () => { input.eject = false; });
 $('pauseBtn').addEventListener('click', () => { Sound.click(); pauseGame(); });
@@ -2871,6 +3127,8 @@ window.addEventListener('keydown', e => {
     if (state === 'playing' && !e.repeat) input.split = Math.min(4, input.split + 1);
   } else if (k === 'w' || k === 'W') {
     if (state === 'playing') input.eject = true;
+  } else if (k === 'e' || k === 'E') {
+    if (state === 'playing' && !e.repeat) input.throw = true;
   } else if (k === 'Escape' || k === 'p' || k === 'P') {
     if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame();
   } else if (k === 'Enter') {
@@ -2882,7 +3140,7 @@ window.addEventListener('keydown', e => {
   } else if ((k === 'r' || k === 'R') && state === 'menu') {
     restartBackground();
   }
-  if (inputMode !== 'mouse' && state === 'playing' && (k === ' ' || k === 'w' || k === 'W')) setInputMode('mouse');
+  if (inputMode !== 'mouse' && state === 'playing' && (k === ' ' || k === 'w' || k === 'W' || k === 'e' || k === 'E')) setInputMode('mouse');
 });
 window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'W') input.eject = false; });
 window.addEventListener('blur', () => { input.eject = false; });
@@ -3451,8 +3709,9 @@ setTimeout(hideSplash, 3000);
 
 // acceso de depuración desde la consola
 window.AgarNova = {
-  get state() { return state; }, players, human, stats, viruses, pellets, bolts, dbg, settings, BOLT_TIME, BOLT_SPEED,
+  get state() { return state; }, players, human, stats, viruses, pellets, powers, thrown, dbg, settings, BOLT_TIME, BOLT_SPEED, throwBomb,
   get now() { return now; },
+  get ejected() { return ejected.length; },
   get world() { return WORLD; },
   think: botThink, SMART,
   spawnCell(p, x, y, mass) { const c = new Cell(p, x, y, mass); p.cells.push(c); p.alive = true; return c; },

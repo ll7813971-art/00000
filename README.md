@@ -63,12 +63,18 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   64 colores candidatos se queda con el más distinto de todos los que ya hay en la arena, y estrena otro
   al reaparecer. Ningún bot lleva un color parecido al del jugador. Antes, con colores puramente al azar,
   en Ultra había ~220 parejas casi idénticas; ahora ninguna (también en partidas normales).
-- **Rayos de poder ⚡:** por el mapa hay rayos que flotan y brillan (8 en los mapas normales, 44 en
-  Ultra; también salen en el minimapa). El jugador o el bot que toque uno va **1,5 veces más rápido durante
-  15 s**, con una estela de su color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al
-  cogerlo y, para el jugador, sonido, vibración y la cuenta atrás «⚡ Rayo 0:15» en el panel izquierdo.
-  Coger otro mientras dura reinicia los 15 s. El rayo reaparece en otro sitio al rato y los bots van a por
-  los que tienen cerca.
+- **Poderes:** el mapa tiene huecos de poder (8 en los mapas normales, 44 en Ultra). Cada hueco libre tira
+  cada 4 s: **30 % rayo**, **19 % bomba** y, si no, se queda vacío hasta la siguiente tirada. Salen en el
+  minimapa (rayos en amarillo, bombas en rojo).
+  - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**, con una estela de su
+    color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al cogerlo y, para el jugador,
+    sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
+  - **Bomba 💣:** al tocarla aparece en el centro de tu célula (con la mecha encendida) y sale el botón
+    **LANZAR** (en PC también la tecla **E**). Se lanza hacia donde miras (el ratón o el joystick). Si toca
+    una célula de otro jugador, esa célula recibe un **aura roja y una cuenta atrás de 3 s** encima y, al
+    llegar a cero, una explosión (bola de fuego, onda, temblor de pantalla y sonido) la **revienta en mini
+    células** (si ya tiene 16 piezas, suelta masa en bolitas). Solo tiene un uso: si no da a nadie, se
+    apaga. Solo se lleva una a la vez. Los bots también las cogen y las lanzan a los rivales grandes.
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
