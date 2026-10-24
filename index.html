@@ -200,7 +200,6 @@ svg{display:block}
 .k.on{color:var(--g1)}
 .k.lock{color:var(--g1);box-shadow:inset 0 -3px 0 var(--g1),0 1.5px 0 var(--osk-sh)}
 .k sup{position:absolute;top:2px;right:4px;font-size:calc(var(--kh,46px) * .2);font-weight:700;color:var(--muted)}
-.k.emo{font-size:calc(var(--kh,46px) * .5)}
 .osk-pop{position:fixed;z-index:61;display:none;align-items:flex-start;justify-content:center;padding-top:6px;border-radius:12px 12px 10px 10px;pointer-events:none;
   background:var(--osk-pop);color:var(--text);font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.35);border:1px solid var(--stroke-2)}
 .osk-alt{position:fixed;z-index:62;display:none;gap:4px;padding:5px;border-radius:14px;pointer-events:none;background:var(--osk-pop);box-shadow:0 10px 30px rgba(0,0,0,.4);border:1px solid var(--stroke-2)}
@@ -806,7 +805,6 @@ const EAT_COVER = 0.1;       // se come cuando el centro de la presa entra en el
 const MAX_CELL_MASS = 22500;
 const BOOST_K = 5;           // amortiguación del impulso al dividirse
 const SPAWN_SHIELD = 3;      // segundos de protección al aparecer
-const SOFT_R = 120;          // radio a partir del cual las células chocan con las de tamaño parecido (en vez de atravesarse)
 
 const radiusOf = m => Math.sqrt(m) * 10;
 const speedOf = m => 520 * Math.pow(m, -0.22);
@@ -1894,8 +1892,8 @@ function collide(dt) {
       if (dx * dx + dy * dy < a.r * a.r) { e.dead = true; a.mass += e.m; a.r = radiusOf(a.mass); }
     }
 
-    // otras células (las grandes miran más lejos: también chocan con células de tamaño parecido)
-    cellGrid.query(a.x, a.y, a.r >= SOFT_R ? a.r * 1.95 : a.r, buf);
+    // otras células: entre jugadores distintos no hay choques, solo se come (las que no se pueden comer se atraviesan)
+    cellGrid.query(a.x, a.y, a.r, buf);
     for (let j = 0; j < buf.length; j++) {
       const b = buf[j];
       if (b === a || b.dead || b.mass > a.mass) continue;
@@ -1906,18 +1904,6 @@ function collide(dt) {
         }
       } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
         if (d < a.r - b.r * EAT_COVER) eatCell(a, b);
-      } else if (a.r >= SOFT_R) {
-        // No se pueden comer (tamaño parecido, o la otra tiene el escudo de aparición): chocan en vez de
-        // atravesarse como fantasmas. El empuje es suave y la célula más ligera se aparta más.
-        const ov = a.r + b.r - d;
-        if (ov > 0) {
-          let nx = dx, ny = dy, dd = d;
-          if (dd < 0.01) { nx = Math.random() - 0.5; ny = Math.random() - 0.5; dd = Math.hypot(nx, ny) || 1; }
-          nx /= dd; ny /= dd;
-          const mv = Math.min(ov * 0.4, 600 * dt), tot = a.mass + b.mass;
-          a.x = clamp(a.x - nx * mv * (b.mass / tot), 0, WORLD); a.y = clamp(a.y - ny * mv * (b.mass / tot), 0, WORLD);
-          b.x = clamp(b.x + nx * mv * (a.mass / tot), 0, WORLD); b.y = clamp(b.y + ny * mv * (a.mass / tot), 0, WORLD);
-        }
       }
     }
 
@@ -2808,12 +2794,11 @@ const OSK = (() => {
     '?': '¿', '!': '¡', '.': '…·', ',': ';:', '-': '_—', '$': '€£¥¢', '0': '°', '"': '«»', "'": '`´' };
   const DIGIT = { q: '1', w: '2', e: '3', r: '4', t: '5', y: '6', u: '7', i: '8', o: '9', p: '0' };
   const PAGES = {
-    abc: ['q w e r t y u i o p', 'a s d f g h j k l ñ', '⇧ z x c v b n m ⌫', '?123 😊 , ␣ . ✓'],
-    sym: ['1 2 3 4 5 6 7 8 9 0', '@ # € _ & - + ( ) /', '=\\< * " \' : ; ! ? ⌫', 'ABC 😊 , ␣ . ✓'],
-    sym2: ['~ ` | • √ π ÷ × ¶ ∆', '£ ¥ $ ¢ ^ ° = { } %', '?123 \\ © ® ™ ¡ ¿ [ ] ⌫', 'ABC 😊 < ␣ > ✓'],
-    emo: ['😀 😂 😍 😎 🤩 😈 👻 💀 🤖 👽', '🔥 ⚡ ⭐ 💎 👑 🎮 🏆 💥 🌙 💜', '🍕 🐱 🐶 🦊 🐼 🦁 🐸 🐙 ⌫', 'ABC , ␣ . ✓']
+    abc: ['q w e r t y u i o p', 'a s d f g h j k l ñ', '⇧ z x c v b n m ⌫', '?123 , ␣ . ✓'],
+    sym: ['1 2 3 4 5 6 7 8 9 0', '@ # € _ & - + ( ) /', '=\\< * " \' : ; ! ? ⌫', 'ABC , ␣ . ✓'],
+    sym2: ['~ ` | • √ π ÷ × ¶ ∆', '£ ¥ $ ¢ ^ ° = { } %', '?123 \\ © ® ™ ¡ ¿ [ ] ⌫', 'ABC < ␣ > ✓']
   };
-  const FN = { '⇧': 'w15 fn', '⌫': 'w15 fn', '?123': 'w15 fn', 'ABC': 'w15 fn', '=\\<': 'w15 fn', '😊': 'fn', '␣': 'w4 space', '✓': 'w15 go' };
+  const FN = { '⇧': 'w15 fn', '⌫': 'w15 fn', '?123': 'w15 fn', 'ABC': 'w15 fn', '=\\<': 'w15 fn', '␣': 'w4 space', '✓': 'w15 go' };
   const ICON = {
     '⇧': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4l8 8h-4.5v7h-7v-7H4z"/></svg>',
     '⌫': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>',
@@ -2832,7 +2817,7 @@ const OSK = (() => {
       r.className = 'osk-row r' + (ri + 1);
       for (const t of row.split(' ')) {
         const k = document.createElement('div');
-        k.className = 'k ' + (FN[t] || '') + (page === 'emo' && isChar(t) && !/^[,.]$/.test(t) ? ' emo' : '');
+        k.className = 'k ' + (FN[t] || '');
         k.dataset.k = t;
         if (ICON[t]) k.innerHTML = ICON[t];
         else if (t === '␣') k.textContent = 'espacio';
@@ -2881,7 +2866,7 @@ const OSK = (() => {
     if (chars(target.value).length >= MAX) { vibrate([10, 40, 10]); countEl.animate && countEl.animate([{ transform: 'scale(1.35)' }, { transform: 'none' }], 220); return; }
     setVal(target.value + ch);
     if (shift === 1) { shift = 0; if (page === 'abc') render(); }
-    if (ch === ' ' && page !== 'abc' && page !== 'emo') { page = 'abc'; render(); }   // como en el móvil: tras un espacio vuelve a las letras
+    if (ch === ' ' && page !== 'abc') { page = 'abc'; render(); }   // como en el móvil: tras un espacio vuelve a las letras
     autoShift();
   }
   function backspace() {
@@ -2896,7 +2881,7 @@ const OSK = (() => {
   function keyAt(x, y) { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('#osk .k') : null; }
   function showPop(k) {
     const t = k.dataset.k;
-    if (!isChar(t) || page === 'emo') { pop.style.display = 'none'; return; }
+    if (!isChar(t)) { pop.style.display = 'none'; return; }
     const r = k.getBoundingClientRect(), w = r.width + 18, h = r.height * 1.25;
     pop.textContent = label(t);
     pop.style.cssText = `display:flex;left:${Math.max(2, Math.min(innerWidth - w - 2, r.left + r.width / 2 - w / 2))}px;top:${r.top - h - 4}px;width:${w}px;height:${h}px;font-size:${r.height * 0.62}px`;
@@ -2956,7 +2941,6 @@ const OSK = (() => {
       case '?123': page = 'sym'; render(); return;
       case '=\\<': page = 'sym2'; render(); return;
       case 'ABC': page = 'abc'; render(); return;
-      case '😊': page = 'emo'; render(); return;
       case '␣': insert(' '); return;
       default: insert(label(t));
     }

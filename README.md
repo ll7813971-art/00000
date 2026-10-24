@@ -66,15 +66,13 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
 - **Partida nueva:** al pulsar Jugar desde el menú todos empiezan de cero (bots incluidos). Si mueres y pulsas «Jugar de nuevo», la partida no se reinicia: los bots conservan su progreso y tú reapareces con la masa inicial.
 - **Unión automática:** las piezas de una célula dividida (de jugador y de bots) se juntan solas, con suavidad, a los 30 s. En el panel de la izquierda aparece la cuenta atrás «Unión en 0:xx». Dividir, expulsar masa o explotar contra un virus reinician la cuenta atrás de todas tus piezas.
-- **Teclado propio del juego (móvil y tableta):** al tocar el apodo se abre un teclado del juego en vez del del móvil, así que nada se encoge ni se queda en negro (tampoco en pantalla completa). QWERTY español con **Ñ**; mantén pulsada una vocal para los acentos (á é í ó ú ü…) o una tecla de arriba para su número; mayúscula automática al empezar cada palabra y doble toque en ⇧ para bloquearla; páginas de números y símbolos (?123, =\<) y de emojis; mantener ⌫ borra seguido; vista previa de cada tecla, vibración y sonido suaves; contador 0/15. ✓, la flecha o tocar fuera lo cierran. En PC se usa el teclado normal.
+- **Teclado propio del juego (móvil y tableta):** al tocar el apodo se abre un teclado del juego en vez del del móvil, así que nada se encoge ni se queda en negro (tampoco en pantalla completa). QWERTY español con **Ñ**; mantén pulsada una vocal para los acentos (á é í ó ú ü…) o una tecla de arriba para su número; mayúscula automática al empezar cada palabra y doble toque en ⇧ para bloquearla; páginas de números y símbolos (?123, =\<); mantener ⌫ borra seguido; vista previa de cada tecla, vibración y sonido suaves; contador 0/15. ✓, la flecha o tocar fuera lo cierran. En PC se usa el teclado normal.
 - **Comer:** una célula que puede comerte (≥25 % más masa) lo hace cuando te tapa aproximadamente la mitad
   de tu superficie, como en el Agar.io original. Antes podía taparte entre el 65 % y el 74 % sin comerte.
   Lo mismo vale para explotar al pasar sobre un virus.
 - **Colisiones:** las células grandes ya no atraviesan los muros (antes podían quedar casi a medias fuera
-  de la arena) y, si crecen pegadas a uno, se desplazan hacia dentro con suavidad. Las células de distinto
-  dueño que no pueden comerse entre sí (tamaño parecido, o con el escudo de aparición) **chocan y se apartan
-  suavemente** en vez de atravesarse como fantasmas: en partidas de 200 bots el solapamiento mediano entre
-  células grandes baja del 76 % al 1 %. Al dividirse un gigante o explotar con un virus, las piezas se
+  de la arena) y, si crecen pegadas a uno, se desplazan hacia dentro con suavidad. Entre jugadores distintos (bots y
+  jugador) **no hay choques**: solo cuenta comer; las células que no pueden comerse se atraviesan. Al dividirse un gigante o explotar con un virus, las piezas se
   separan sin tirones (el mayor salto por fotograma baja de 153 px a 45 px), la célula comida se desliza
   hacia el borde de quien se la come y las piezas propias se empujan entre sí sin hundirse ni temblar,
   también contra un muro. Los virus y la masa expulsada rebotan con su borde.
