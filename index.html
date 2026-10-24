@@ -2681,6 +2681,39 @@ if (VK) VK.addEventListener('geometrychange', () => {
   requestAnimationFrame(keepFieldVisible);
 });
 if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (kbBase) requestAnimationFrame(keepFieldVisible); });
+
+// En pantalla completa los móviles (Chrome, app de Google) no saben mostrar bien el teclado: la pantalla se queda
+// en negro. Así que al tocar el campo del apodo se sale antes de pantalla completa, se escribe con normalidad y,
+// al terminar, el siguiente toque (o «Jugar») vuelve a ponerla.
+let fsResume = false;
+const inFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function exitFs() {
+  try { const d = document, r = (d.exitFullscreen || d.webkitExitFullscreen).call(d); return r && r.then ? r.catch(() => {}) : Promise.resolve(); }
+  catch (e) { return Promise.resolve(); }
+}
+function enterFs() {
+  try { const de = document.documentElement, r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de); if (r && r.catch) r.catch(() => {}); }
+  catch (e) { /* no soportado */ }
+}
+function typeOutsideFs(e) {
+  if (!document.body.classList.contains('touch') || !inFs()) return;
+  e.preventDefault();                      // todavía no: primero se sale de pantalla completa
+  fsResume = true;
+  const f = e.currentTarget;
+  exitFs().then(() => setTimeout(() => { resize(); try { f.focus({ preventScroll: true }); } catch (x) { f.focus(); } }, 350));
+}
+for (const f of document.querySelectorAll('input[type=text]')) {
+  f.addEventListener('touchstart', typeOutsideFs, { passive: false });
+  f.addEventListener('mousedown', typeOutsideFs);
+  f.addEventListener('focus', () => { if (document.body.classList.contains('touch') && inFs()) { fsResume = true; exitFs(); } });
+}
+document.addEventListener('pointerup', e => {
+  if (!fsResume || isTyping() || e.pointerType === 'mouse') return;
+  const t = e.target;
+  if (t && t.closest && (t.closest('input[type=text]') || t.closest('[data-act="fs"]'))) { if (t.closest('[data-act="fs"]')) fsResume = false; return; }
+  fsResume = false;
+  if (!inFs()) enterFs();
+}, true);
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 /* =====================================================================
