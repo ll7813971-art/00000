@@ -260,6 +260,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 #stats .srow{display:flex;gap:12px;margin-top:4px}
 #stats .srow div{display:flex;flex-direction:column}
 #stats .srow b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+#mergeRow{margin-top:5px;padding-top:5px;border-top:1px solid var(--stroke);font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+#mergeRow[hidden]{display:none}
+#mergeRow b{font-size:13px;font-variant-numeric:tabular-nums;background:var(--grad-warm);-webkit-background-clip:text;background-clip:text;color:transparent}
 #stats .srow span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
 #subRow{display:flex;gap:10px;align-items:flex-start}
 #minimapWrap{position:fixed;right:calc(12px + var(--sr));bottom:calc(12px + var(--sb));width:172px;height:172px;padding:6px;border-radius:18px}
@@ -453,6 +456,7 @@ body.touch .only-pc{display:none}
         <div><b id="cellsVal">1/16</b><span>Células</span></div>
         <div><b id="timeVal">0:00</b><span>Tiempo</span></div>
       </div>
+      <div id="mergeRow" hidden><span>Unión en</span> <b id="mergeVal">0:30</b></div>
     </div>
     <div id="subRow">
       <div id="minimapWrap" class="glass"><canvas id="minimap" aria-label="Minimapa"></canvas></div>
@@ -746,7 +750,8 @@ const SOFT_R = 120;          // radio a partir del cual las células chocan con 
 const radiusOf = m => Math.sqrt(m) * 10;
 const speedOf = m => 520 * Math.pow(m, -0.22);
 const splitDistOf = r => 360 + r * 0.7;
-const mergeTimeOf = m => 8 + m * 0.008;
+const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
+const mergeTimeOf = m => MERGE_TIME;
 
 // iq: 1 = bots normales, 2 = Ultra (predicen movimientos, rastrean comida, evitan trampas, usan más trucos)
 const DIFFS = {
@@ -1738,6 +1743,20 @@ function moveCells(p, dt) {
       }
     }
   }
+  // Pasado el tiempo de unión, las piezas se acercan solas a la mayor, con suavidad, hasta fundirse
+  if (n > 1) {
+    let big = cells[0];
+    for (const c of cells) if (c.mass > big.mass) big = c;
+    if (now >= big.mergeAt) {
+      for (const c of cells) {
+        if (c === big || now < c.mergeAt) continue;
+        const dx = big.x - c.x, dy = big.y - c.y, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 1) continue;
+        const sp = Math.min(d, Math.min(420, 90 + d * 0.9) * dt);
+        c.x += (dx / d) * sp; c.y += (dy / d) * sp;
+      }
+    }
+  }
   const idt = 1 / dt;
   for (let i = 0; i < n; i++) {
     // Muros: la célula entera se queda dentro de la arena. Si ya estaba dentro, se detiene en el muro; si
@@ -2286,6 +2305,12 @@ function updateHud(dt) {
     el.mass.textContent = fmt(human.alive ? human.mass : 0);
     el.cells.textContent = human.cells.length + '/' + MAX_CELLS;
     el.time.textContent = fmtTime(human.alive ? now - stats.start : stats.alive || 0);
+    // cuenta atrás para que las piezas se unan solas
+    let left = 0;
+    if (human.alive && human.cells.length > 1) for (const c of human.cells) left = Math.max(left, c.mergeAt - now);
+    const mr = $('mergeRow'), show = human.alive && human.cells.length > 1;
+    if (mr.hidden === show) mr.hidden = !show;
+    if (show) $('mergeVal').textContent = left > 0.05 ? fmtTime(Math.ceil(left)) : 'uniéndose…';
   }
   if (mmT <= 0) { mmT = 1 / 20; drawMinimap(); }
 }
