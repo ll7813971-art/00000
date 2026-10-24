@@ -316,8 +316,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 #bombRow.hit{animation:bombBlink .5s steps(1) infinite}
 #bombRow.acid{color:#4ade80}
 #bombBtn.acid{background:radial-gradient(circle at 35% 30%,#bef264,#16a34a 60%,#14532d);box-shadow:0 10px 28px rgba(34,197,94,.45),inset 0 2px 0 rgba(255,255,255,.3);animation:none}
-#bombBtn .ic-acid,#bombBtn.acid .ic-bomb{display:none}
-#bombBtn.acid .ic-acid{display:block}
+#bombBtn.ice{background:radial-gradient(circle at 35% 30%,#e0f2fe,#38bdf8 55%,#1d4ed8);box-shadow:0 10px 28px rgba(56,189,248,.45),inset 0 2px 0 rgba(255,255,255,.4);animation:none}
+#bombRow.ice{color:#7dd3fc}
+#bombBtn .ic-acid,#bombBtn .ic-ice,#bombBtn.acid .ic-bomb,#bombBtn.ice .ic-bomb{display:none}
+#bombBtn.acid .ic-acid,#bombBtn.ice .ic-ice{display:block}
 @keyframes bombBlink{50%{color:#fde047}}
 #bombBtn{position:absolute;display:none;align-items:center;justify-content:center;gap:8px;pointer-events:auto;color:#fff;font-weight:900;letter-spacing:.08em;border:2px solid rgba(255,255,255,.4);
   background:radial-gradient(circle at 35% 30%,#fb923c,#dc2626 60%,#7f1d1d);box-shadow:0 10px 28px rgba(220,38,38,.45),inset 0 2px 0 rgba(255,255,255,.3);touch-action:none;-webkit-user-select:none;user-select:none;animation:bombGlow 1s ease-in-out infinite;transition:filter .08s}
@@ -551,7 +553,7 @@ body.touch .only-pc{display:none}
     <span><kbd>Esc</kbd> pausa</span>
   </div>
   <div id="fps"></div>
-  <button id="bombBtn" aria-label="Lanzar"><svg class="ic-acid" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v8l7 12a5 5 0 0 1-4.3 7.5H10.3A5 5 0 0 1 6 23l7-12z" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.6 20h14.8l2.2 3.8a3 3 0 0 1-2.6 4.5H9a3 3 0 0 1-2.6-4.5z" fill="#bef264"/><rect x="12" y="1.5" width="8" height="3" rx="1" fill="#fde68a"/></svg><svg class="ic-bomb" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#111827" stroke="#fff" stroke-width="1.6"/><path d="M20 10q3-6 8-6" stroke="#fde68a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="4" r="2.6" fill="#fde047"/><circle cx="10.5" cy="15" r="2.4" fill="rgba(255,255,255,.5)"/></svg><span>LANZAR</span><kbd>E</kbd></button>
+  <button id="bombBtn" aria-label="Lanzar"><svg class="ic-ice" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="5" width="22" height="22" rx="6" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.8"/><path d="M16 9v14M10 12l12 8M22 12l-12 8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg><svg class="ic-acid" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3h6v8l7 12a5 5 0 0 1-4.3 7.5H10.3A5 5 0 0 1 6 23l7-12z" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.6 20h14.8l2.2 3.8a3 3 0 0 1-2.6 4.5H9a3 3 0 0 1-2.6-4.5z" fill="#bef264"/><rect x="12" y="1.5" width="8" height="3" rx="1" fill="#fde68a"/></svg><svg class="ic-bomb" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#111827" stroke="#fff" stroke-width="1.6"/><path d="M20 10q3-6 8-6" stroke="#fde68a" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="4" r="2.6" fill="#fde047"/><circle cx="10.5" cy="15" r="2.4" fill="rgba(255,255,255,.5)"/></svg><span>LANZAR</span><kbd>E</kbd></button>
   <div id="touch">
     <button id="btnEject" class="tbtn" aria-label="Expulsar masa">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5c3.6 4.4 6.5 8 6.5 11.4A6.5 6.5 0 0 1 5.5 13.9C5.5 10.5 8.4 6.9 12 2.5z"/></svg>
@@ -843,6 +845,10 @@ const BOMB_FUSE = 3;         // segundos que tarda en explotar la célula alcanz
 const ACID_CHANCE = 0.11;    // …ácido con un 11 %
 const ACID_TIME = 5;         // el ácido dura 5 s…
 const ACID_RATE = 0.08;      // …y cada segundo quita el 8 % de la masa de la célula envenenada
+const ICE_CHANCE = 0.04;     // …hielo con un 4 %
+const ICE_FREEZE = 3;        // congelada (quieta) 3 s…
+const ICE_SLOW = 2;          // …y después muy lenta otros 2 s
+const ICE_SLOW_MUL = 0.3;    // velocidad mientras sigue helada
 const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
 const mergeTimeOf = m => MERGE_TIME;
 
@@ -1026,35 +1032,126 @@ function makeBombSprite(S) {
   return cv;
 }
 let bombSprite = makeBombSprite(160);
-// matraz de ácido: cristal, líquido verde brillante, burbujas y tapón
+// matraz de ácido: cristal grueso, líquido verde neón con brillo interior, etiqueta de calavera, tapón y gotas
 function makeAcidSprite(S) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
-  const halo = g.createRadialGradient(S / 2, S * 0.62, S * 0.15, S / 2, S * 0.62, S * 0.5);
-  halo.addColorStop(0, 'rgba(74,222,128,0.45)'); halo.addColorStop(1, 'rgba(74,222,128,0)');
+  const halo = g.createRadialGradient(S / 2, S * 0.62, S * 0.12, S / 2, S * 0.62, S * 0.5);
+  halo.addColorStop(0, 'rgba(132,204,22,0.55)'); halo.addColorStop(0.6, 'rgba(34,197,94,0.16)'); halo.addColorStop(1, 'rgba(34,197,94,0)');
   g.fillStyle = halo; g.fillRect(0, 0, S, S);
-  const cx = S / 2, cy = S * 0.64, R = S * 0.27, nw = S * 0.13;
-  const flask = () => { g.beginPath(); g.moveTo(cx - nw / 2, S * 0.2); g.lineTo(cx - nw / 2, cy - R * 0.82); g.arc(cx, cy, R, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5, true); g.lineTo(cx + nw / 2, S * 0.2); g.closePath(); };
-  // cristal
-  flask(); g.fillStyle = 'rgba(220,255,230,0.18)'; g.fill();
-  // líquido
+  const cx = S / 2, cy = S * 0.63, R = S * 0.28, nw = S * 0.14, top = S * 0.17;
+  const flask = () => { g.beginPath(); g.moveTo(cx - nw / 2, top); g.lineTo(cx - nw / 2, cy - R * 0.84); g.arc(cx, cy, R, -Math.PI / 2 - 0.52, -Math.PI / 2 + 0.52, true); g.lineTo(cx + nw / 2, top); g.closePath(); };
+  // sombra del cristal
+  flask(); g.lineWidth = S * 0.07; g.strokeStyle = 'rgba(5,46,22,0.55)'; g.stroke();
+  flask(); g.fillStyle = 'rgba(200,255,220,0.16)'; g.fill();
+  // líquido con brillo interior y superficie ondulada
   g.save(); flask(); g.clip();
-  const lq = g.createLinearGradient(0, cy - R * 0.4, 0, cy + R);
-  lq.addColorStop(0, '#bef264'); lq.addColorStop(0.5, '#22c55e'); lq.addColorStop(1, '#14532d');
-  g.fillStyle = lq; g.fillRect(0, cy - R * 0.35, S, S);
-  g.fillStyle = 'rgba(255,255,255,0.55)';
-  for (const [bx, by, br] of [[0.42, 0.66, 0.03], [0.56, 0.74, 0.022], [0.5, 0.58, 0.018], [0.6, 0.62, 0.014]]) { g.beginPath(); g.arc(bx * S, by * S, br * S, 0, TAU); g.fill(); }
+  const lvl = cy - R * 0.3;
+  const lq = g.createRadialGradient(cx - R * 0.2, cy + R * 0.1, R * 0.05, cx, cy, R * 1.05);
+  lq.addColorStop(0, '#ecfccb'); lq.addColorStop(0.28, '#a3e635'); lq.addColorStop(0.7, '#16a34a'); lq.addColorStop(1, '#052e16');
+  g.fillStyle = lq;
+  g.beginPath(); g.moveTo(0, lvl);
+  for (let x = 0; x <= S; x += S / 16) g.lineTo(x, lvl + Math.sin(x / S * TAU * 2) * S * 0.012);
+  g.lineTo(S, S); g.lineTo(0, S); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(236,252,203,0.55)';
+  g.fillRect(0, lvl - S * 0.006, S, S * 0.014);
+  for (const [bx, by, br] of [[0.38, 0.7, 0.028], [0.6, 0.76, 0.02], [0.53, 0.58, 0.016], [0.64, 0.64, 0.013], [0.44, 0.8, 0.012]]) {
+    g.beginPath(); g.arc(bx * S, by * S, br * S, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fill();
+  }
   g.restore();
-  flask(); g.lineWidth = S * 0.022; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.stroke();
-  // brillo del cristal
-  g.beginPath(); g.ellipse(cx - R * 0.45, cy - R * 0.25, R * 0.12, R * 0.3, 0.5, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.4)'; g.fill();
-  // tapón
-  g.fillStyle = '#a16207'; g.fillRect(cx - nw * 0.62, S * 0.12, nw * 1.24, S * 0.1);
-  g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(cx - nw * 0.62, S * 0.12, nw * 1.24, S * 0.025);
+  // etiqueta con calavera
+  const lx = cx, ly = cy + R * 0.28, lr = R * 0.36;
+  g.beginPath(); g.arc(lx, ly, lr, 0, TAU); g.fillStyle = 'rgba(20,20,20,0.82)'; g.fill();
+  g.lineWidth = S * 0.012; g.strokeStyle = '#d9f99d'; g.stroke();
+  g.fillStyle = '#ecfccb';
+  g.beginPath(); g.arc(lx, ly - lr * 0.12, lr * 0.52, 0, TAU); g.fill();
+  g.fillRect(lx - lr * 0.3, ly + lr * 0.2, lr * 0.6, lr * 0.32);
+  g.fillStyle = 'rgba(20,20,20,0.95)';
+  g.beginPath(); g.arc(lx - lr * 0.2, ly - lr * 0.15, lr * 0.13, 0, TAU); g.arc(lx + lr * 0.2, ly - lr * 0.15, lr * 0.13, 0, TAU); g.fill();
+  g.fillRect(lx - lr * 0.04, ly + lr * 0.22, lr * 0.08, lr * 0.28);
+  // borde del cristal y brillos
+  flask(); g.lineWidth = S * 0.024; g.strokeStyle = 'rgba(240,255,244,0.95)'; g.stroke();
+  g.beginPath(); g.ellipse(cx - R * 0.5, cy - R * 0.2, R * 0.1, R * 0.32, 0.45, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(cx - nw * 0.32, top + S * 0.03, nw * 0.12, (cy - R * 0.84) - top - S * 0.04);
+  // tapón de corcho
+  const cg = g.createLinearGradient(0, S * 0.08, 0, S * 0.2);
+  cg.addColorStop(0, '#d6a35c'); cg.addColorStop(1, '#854d0e');
+  g.fillStyle = cg;
+  g.beginPath(); g.moveTo(cx - nw * 0.68, S * 0.09); g.lineTo(cx + nw * 0.68, S * 0.09); g.lineTo(cx + nw * 0.56, S * 0.2); g.lineTo(cx - nw * 0.56, S * 0.2); g.closePath(); g.fill();
+  // gota que resbala
+  g.fillStyle = '#84cc16';
+  g.beginPath(); g.moveTo(cx + nw * 0.5, S * 0.24); g.quadraticCurveTo(cx + nw * 0.85, S * 0.33, cx + nw * 0.62, S * 0.36); g.quadraticCurveTo(cx + nw * 0.38, S * 0.33, cx + nw * 0.5, S * 0.24); g.fill();
   return cv;
 }
 let acidSprite = makeAcidSprite(160);
+// cubo de hielo: azul translúcido con caras, brillos y un copo de nieve
+function makeIceSprite(S) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const halo = g.createRadialGradient(S / 2, S / 2, S * 0.12, S / 2, S / 2, S * 0.5);
+  halo.addColorStop(0, 'rgba(125,211,252,0.5)'); halo.addColorStop(1, 'rgba(125,211,252,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, S, S);
+  const c = S / 2, a = S * 0.27;
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  g.save(); g.translate(c, c); g.rotate(-0.18);
+  rr(-a, -a, a * 2, a * 2, a * 0.28);
+  const body = g.createLinearGradient(-a, -a, a, a);
+  body.addColorStop(0, 'rgba(240,249,255,0.95)'); body.addColorStop(0.45, 'rgba(125,211,252,0.85)'); body.addColorStop(1, 'rgba(29,78,216,0.85)');
+  g.fillStyle = body; g.fill();
+  g.lineWidth = S * 0.02; g.strokeStyle = 'rgba(255,255,255,0.9)'; g.stroke();
+  // cara interior
+  rr(-a * 0.62, -a * 0.62, a * 1.24, a * 1.24, a * 0.18);
+  g.fillStyle = 'rgba(255,255,255,0.18)'; g.fill(); g.lineWidth = S * 0.01; g.strokeStyle = 'rgba(255,255,255,0.55)'; g.stroke();
+  // copo de nieve
+  g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = S * 0.018; g.lineCap = 'round';
+  for (let i = 0; i < 6; i++) {
+    const t = i / 6 * TAU, x = Math.cos(t) * a * 0.5, y = Math.sin(t) * a * 0.5;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(x, y); g.stroke();
+    const bx = Math.cos(t) * a * 0.32, by = Math.sin(t) * a * 0.32;
+    for (const sgn of [-1, 1]) { g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + Math.cos(t + sgn * 0.8) * a * 0.14, by + Math.sin(t + sgn * 0.8) * a * 0.14); g.stroke(); }
+  }
+  // brillo
+  g.beginPath(); g.ellipse(-a * 0.5, -a * 0.55, a * 0.32, a * 0.1, -0.5, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.75)'; g.fill();
+  g.restore();
+  return cv;
+}
+let iceSprite = makeIceSprite(160);
+// capa de escarcha para una célula congelada: brillo helado, grietas y cristales (se dibuja encima de la célula)
+function makeFrostSprite(S) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d'), c = S / 2, R = S / 2;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  g.save(); g.beginPath(); g.arc(c, c, R, 0, TAU); g.clip();
+  const fill = g.createRadialGradient(c - R * 0.3, c - R * 0.35, R * 0.1, c, c, R);
+  fill.addColorStop(0, 'rgba(240,249,255,0.96)'); fill.addColorStop(0.45, 'rgba(125,190,250,0.9)'); fill.addColorStop(1, 'rgba(29,78,216,0.95)');
+  g.fillStyle = fill; g.fillRect(0, 0, S, S);
+  // grietas
+  g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineCap = 'round';
+  for (let i = 0; i < 9; i++) {
+    let x = c + (rnd() - 0.5) * R * 0.5, y = c + (rnd() - 0.5) * R * 0.5, ang = rnd() * TAU;
+    g.lineWidth = S * (0.006 + rnd() * 0.006);
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 5; k++) { ang += (rnd() - 0.5) * 1.1; const l = R * (0.12 + rnd() * 0.16); x += Math.cos(ang) * l; y += Math.sin(ang) * l; g.lineTo(x, y); }
+    g.stroke();
+  }
+  // cristales de hielo
+  g.fillStyle = 'rgba(255,255,255,0.55)';
+  for (let i = 0; i < 26; i++) {
+    const a = rnd() * TAU, d = Math.sqrt(rnd()) * R * 0.92, x = c + Math.cos(a) * d, y = c + Math.sin(a) * d, z = S * (0.008 + rnd() * 0.02);
+    g.beginPath(); g.moveTo(x, y - z); g.lineTo(x + z * 0.6, y); g.lineTo(x, y + z); g.lineTo(x - z * 0.6, y); g.closePath(); g.fill();
+  }
+  // borde escarchado
+  g.lineWidth = S * 0.05; g.strokeStyle = 'rgba(224,242,254,0.85)';
+  g.beginPath(); g.arc(c, c, R * 0.97, 0, TAU); g.stroke();
+  g.restore();
+  // brillo
+  g.beginPath(); g.ellipse(c - R * 0.38, c - R * 0.45, R * 0.28, R * 0.1, -0.6, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.7)'; g.fill();
+  return cv;
+}
+let frostSprite = makeFrostSprite(256);
 // burbujas que suben del matraz (animadas)
 function drawFumes(x, y, S) {
   for (let i = 0; i < 3; i++) {
@@ -1065,8 +1162,18 @@ function drawFumes(x, y, S) {
   }
   ctx.globalAlpha = 1;
 }
-const throwSprite = k => (k === 'acid' ? acidSprite : bombSprite);
-function drawThrowFx(k, x, y, S) { if (k === 'acid') drawFumes(x, y, S); else drawSpark(x, y, S); }
+const throwSprite = k => (k === 'acid' ? acidSprite : k === 'ice' ? iceSprite : bombSprite);
+// brillo frío que gira alrededor del hielo
+function drawFrost(x, y, S) {
+  for (let i = 0; i < 3; i++) {
+    const a = now * 2 + i * 2.1, d = S * 0.42;
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(now * 6 + i);
+    ctx.fillStyle = '#f0f9ff';
+    ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, S * 0.035, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawThrowFx(k, x, y, S) { if (k === 'acid') drawFumes(x, y, S); else if (k === 'ice') drawFrost(x, y, S); else drawSpark(x, y, S); }
 // chispa de la mecha (animada) para una bomba dibujada en (x, y) con tamaño S
 function drawSpark(x, y, S) {
   const sx = x + (BOMB_TIP[0] - 0.5) * S, sy = y + (BOMB_TIP[1] - 0.5) * S, f = 0.7 + Math.random() * 0.6;
@@ -1099,6 +1206,18 @@ const Sound = {
       this.master.connect(lim); lim.connect(this.ctx.destination);
     } catch (e) { this.ctx = null; }
   },
+  // ruido filtrado: chisporroteo del ácido, crujido del hielo
+  noise(dur, vol, freq, type, delay, q) {
+    if (!this.on || !this.ctx || this.ctx.state !== 'running') return;
+    const c = this.ctx, t = c.currentTime + (delay || 0);
+    if (!this.nbuf) { const n = c.sampleRate; this.nbuf = c.createBuffer(1, n, n); const d = this.nbuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; }
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = this.nbuf; src.loop = true;
+    f.type = type || 'bandpass'; f.frequency.value = freq; f.Q.value = q || 1.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.05);
+  },
   tone(f1, f2, dur, type, vol, delay) {
     if (!this.on || !this.ctx || this.ctx.state !== 'running') return;
     const t = this.ctx.currentTime + (delay || 0);
@@ -1128,9 +1247,15 @@ const Sound = {
   bombThrow() { this.tone(900, 180, 0.22, 'sawtooth', 0.05); },
   bombHit() { this.tone(300, 120, 0.12, 'square', 0.06); },
   tick(n) { this.tone(n <= 1 ? 1900 : 1400, n <= 1 ? 1900 : 1400, 0.06, 'square', 0.035); },
-  acidPick() { this.tone(300, 900, 0.14, 'sine', 0.05); this.tone(700, 1300, 0.08, 'sine', 0.04, 0.09); },
-  acidHit() { this.tone(700, 160, 0.22, 'triangle', 0.08); this.tone(1400, 500, 0.12, 'sine', 0.04, 0.03); },
-  acidTick() { this.tone(340, 180, 0.12, 'sine', 0.05); this.tone(900, 600, 0.05, 'sine', 0.02, 0.05); },
+  // ácido: burbujeo al cogerlo, salpicadura y chisporroteo al dar, y un «fsss» con burbujas cada segundo
+  acidPick() { [0, 0.07, 0.15].forEach((d, i) => this.tone(380 + i * 220, 900 + i * 300, 0.09, 'sine', 0.06, d)); this.noise(0.25, 0.05, 2200, 'bandpass', 0, 2); },
+  acidThrow() { this.tone(820, 260, 0.2, 'triangle', 0.05); this.noise(0.25, 0.04, 1400, 'bandpass', 0, 1.5); },
+  acidHit() { this.noise(0.7, 0.16, 3200, 'bandpass', 0, 0.9); this.tone(620, 140, 0.25, 'triangle', 0.09); [0.08, 0.17, 0.27].forEach((d, i) => this.tone(500 + i * 180, 1100 + i * 200, 0.06, 'sine', 0.05, d)); },
+  acidTick(k) { const n = performance.now(); if (n - (this.lat || 0) < 90) return; this.lat = n; k = k || 1; this.noise(0.32, 0.09 * k, 2600, 'bandpass', 0, 1); this.tone(300, 520, 0.07, 'sine', 0.05 * k, 0.03); this.tone(450, 800, 0.05, 'sine', 0.04 * k, 0.12); },
+  icePick() { this.tone(1800, 2600, 0.12, 'sine', 0.05); this.tone(2400, 3200, 0.1, 'sine', 0.035, 0.07); },
+  iceThrow() { this.tone(1600, 700, 0.18, 'sine', 0.04); this.noise(0.18, 0.03, 6000, 'highpass', 0, 0.7); },
+  iceHit() { this.noise(0.4, 0.12, 5200, 'highpass', 0, 0.7); [0, 0.05, 0.11].forEach((d, i) => this.tone(2200 + i * 500, 2900 + i * 500, 0.14, 'sine', 0.05, d)); this.tone(300, 120, 0.25, 'triangle', 0.06); },
+  iceBreak() { const n = performance.now(); if (n - (this.lib || 0) < 120) return; this.lib = n; this.noise(0.3, 0.1, 4200, 'highpass', 0, 0.8); this.tone(1500, 600, 0.18, 'triangle', 0.04); },
   boom() { this.tone(140, 30, 0.75, 'sawtooth', 0.16); this.tone(70, 25, 0.95, 'triangle', 0.16); this.tone(420, 60, 0.4, 'square', 0.05, 0.02); },
   start() { [0, 0.09, 0.18].forEach((d, i) => this.tone(440 * (1 + i * 0.26), 880 * (1 + i * 0.26), 0.12, 'sine', 0.05, d)); }
 };
@@ -1181,7 +1306,7 @@ class Player {
     this.tx = 0; this.ty = 0;
     this.speedMul = 1;
     this.boostUntil = 0;                  // rayo: velocidad x1.5 hasta este momento
-    this.bomb = false;                    // lo que lleva para lanzar: false, 'bomb' o 'acid'
+    this.bomb = false;                    // lo que lleva para lanzar: false, 'bomb', 'acid' o 'ice'
     this.bombSince = 0; this.nextBombCheck = 0;
     this.nextEject = 0;
     this.protectUntil = 0;
@@ -1221,6 +1346,7 @@ class Cell {
     // forma interna; añadirlos sobre la marcha volvía el juego 3 veces más lento en Ultra
     this.bombAt = 0; this.bombBy = null; this.bombSec = 0;   // bomba pegada: explota en bombAt
     this.acidUntil = 0; this.acidNext = 0; this.acidBy = null; // ácido: pierde masa cada segundo hasta acidUntil
+    this.iceUntil = 0; this.slowUntil = 0;                   // hielo: quieta hasta iceUntil y lenta hasta slowUntil
     this.trail = null; this.trailT = 0;                      // estela del rayo
   }
 }
@@ -1316,9 +1442,19 @@ function spawnVirus(x, y, vx, vy) {
 }
 
 /* ---------- Poderes: rayo y bomba ---------- */
+const THROWABLE = {
+  bomb: { col: '#f87171', fx: '#f97316', txt: '#fde68a', label: '💣 ¡Bomba!', snd: 'bombPick' },
+  acid: { col: '#4ade80', fx: '#4ade80', txt: '#86efac', label: '🧪 ¡Ácido!', snd: 'acidPick' },
+  ice:  { col: '#7dd3fc', fx: '#bae6fd', txt: '#bae6fd', label: '❄ ¡Hielo!', snd: 'icePick' }
+};
 function rollPower() {
   const r = Math.random();
-  return r < BOLT_CHANCE ? 'bolt' : r < BOLT_CHANCE + BOMB_CHANCE ? 'bomb' : r < BOLT_CHANCE + BOMB_CHANCE + ACID_CHANCE ? 'acid' : null;
+  let a = BOLT_CHANCE;
+  if (r < a) return 'bolt';
+  if (r < (a += BOMB_CHANCE)) return 'bomb';
+  if (r < (a += ACID_CHANCE)) return 'acid';
+  if (r < (a += ICE_CHANCE)) return 'ice';
+  return null;
 }
 function inView(x, y, pad) {
   const hw = vw / 2 / cam.s + pad, hh = vh / 2 / cam.s + pad;
@@ -1346,16 +1482,16 @@ function pickPower(o, c) {
     if (p === human) { Sound.power(); vibrate([15, 30, 25]); addFloat(c.x, c.y - c.r - 30, '⚡ ¡Velocidad x1.5!'); }
     dbg.bolts = (dbg.bolts || 0) + 1;
   } else {
-    const acid = o.type === 'acid';
-    p.bomb = o.type;                                  // la bomba (o el ácido) se queda en el centro de tu célula
+    const K = THROWABLE[o.type];
+    p.bomb = o.type;                                  // la bomba (o el ácido, o el hielo) se queda en el centro de tu célula
     p.bombSince = now;
-    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(70, c.r * 1.3), col: acid ? '#4ade80' : '#f87171' });
-    burst(o.x, o.y, acid ? '#4ade80' : '#f97316', 12, 30);
+    shocks.push({ x: o.x, y: o.y, t0: now, r: Math.max(70, c.r * 1.3), col: K.col });
+    burst(o.x, o.y, K.fx, 12, 30);
     if (p === human) {
-      acid ? Sound.acidPick() : Sound.bombPick(); vibrate(20);
-      addFloat(c.x, c.y - c.r - 30, (acid ? '🧪 ¡Ácido!' : '💣 ¡Bomba!') + (inputMode === 'touch' ? ' Pulsa LANZAR' : ' Pulsa E'));
+      Sound[K.snd](); vibrate(20);
+      addFloat(c.x, c.y - c.r - 30, K.label + (inputMode === 'touch' ? ' Pulsa LANZAR' : ' Pulsa E'), K.txt);
     }
-    dbg[acid ? 'acidPicked' : 'bombsPicked'] = (dbg[acid ? 'acidPicked' : 'bombsPicked'] || 0) + 1;
+    dbg[o.type + 'Picked'] = (dbg[o.type + 'Picked'] || 0) + 1;
   }
 }
 // lanza la bomba hacia donde mira el jugador (o hacia el punto ax, ay)
@@ -1372,7 +1508,7 @@ function throwBomb(p, ax, ay) {
   const kind = p.bomb;
   p.bomb = false;
   thrown.push({ kind, x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, dead: false });
-  if (p === human) { Sound.bombThrow(); vibrate(12); }
+  if (p === human) { kind === 'acid' ? Sound.acidThrow() : kind === 'ice' ? Sound.iceThrow() : Sound.bombThrow(); vibrate(12); }
   dbg.bombsThrown = (dbg.bombsThrown || 0) + 1;
   return true;
 }
@@ -1421,7 +1557,7 @@ function botBomb(b) {
   const range = 900 + big.r * 1.2, sp = 1500 + big.r * 1.6;
   let best = null, bestS = 0;
   for (const c of allCells) {
-    if (c.owner === b || c.dead || (b.bomb === 'acid' ? c.acidUntil > now : c.bombAt) || c.owner.protectUntil > now || c.mass < 30) continue;
+    if (c.owner === b || c.dead || (b.bomb === 'acid' ? c.acidUntil > now : b.bomb === 'ice' ? c.slowUntil > now : c.bombAt) || c.owner.protectUntil > now || c.mass < 30) continue;
     const d = Math.hypot(c.x - big.x, c.y - big.y) - big.r;
     if (d > range) continue;
     const sc = (c.mass / (big.mass + 50)) * (1 + (c.mass > big.mass * 0.9 ? 1.5 : 0)) / (d + 300);   // prefiere a los grandes y peligrosos
@@ -1456,21 +1592,30 @@ function updatePowers(dt) {
     if (t.x < 0 || t.y < 0 || t.x > WORLD || t.y > WORLD || now - t.born > 1.7) {   // no tocó a nadie: se apaga
       t.dead = true; burst(clamp(t.x, 0, WORLD), clamp(t.y, 0, WORLD), '#9ca3af', 8, 10); continue;
     }
-    const acid = t.kind === 'acid';
-    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: acid ? 'rgba(74,222,128,0.85)' : 'rgba(160,160,170,0.8)' });
+    const acid = t.kind === 'acid', ice = t.kind === 'ice';
+    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: acid ? 'rgba(74,222,128,0.85)' : ice ? 'rgba(224,242,254,0.9)' : 'rgba(160,160,170,0.8)' });
     for (const c of allCells) {
-      if (c.owner === t.owner || c.dead || (!acid && c.bombAt) || c.owner.protectUntil > now) continue;
+      if (c.owner === t.owner || c.dead || (t.kind === 'bomb' && c.bombAt) || c.owner.protectUntil > now) continue;
       const lim = c.r + BOMB_R * 0.5, dx = c.x - t.x, dy = c.y - t.y;
       if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
       if (dx * dx + dy * dy < lim * lim) {
         t.dead = true;
+        const heard = c.owner === human || t.owner === human || inView(c.x, c.y, c.r);
         if (acid) {                                       // ácido: la célula se pone verde y pierde masa cada segundo
           c.acidUntil = now + ACID_TIME; c.acidNext = now + 1; c.acidBy = t.owner;
           shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#4ade80' });
           burst(t.x, t.y, '#4ade80', 16, 30); burst(t.x, t.y, '#bef264', 8, 20);
-          if (c.owner === human) { Sound.acidHit(); vibrate([20, 20, 40]); }
-          else if (t.owner === human) Sound.acidHit();
+          if (heard) Sound.acidHit();
+          if (c.owner === human) vibrate([20, 20, 40]);
           dbg.acidHits = (dbg.acidHits || 0) + 1;
+        } else if (ice) {                                 // hielo: azul y quieta 3 s, luego muy lenta 2 s
+          c.iceUntil = now + ICE_FREEZE; c.slowUntil = now + ICE_FREEZE + ICE_SLOW;
+          c.vx = c.vy = 0;
+          shocks.push({ x: c.x, y: c.y, t0: now, r: Math.max(70, c.r * 1.2), col: '#7dd3fc' });
+          burst(t.x, t.y, '#e0f2fe', 18, 30); burst(c.x, c.y, '#7dd3fc', 14, c.r * 0.3);
+          if (heard) Sound.iceHit();
+          if (c.owner === human) vibrate([40, 30, 40]);
+          dbg.iceHits = (dbg.iceHits || 0) + 1;
         } else {
           c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
           shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
@@ -1492,14 +1637,23 @@ function updatePowers(dt) {
       if (loss > 0) {
         c.mass -= loss; c.r = radiusOf(c.mass);
         const mine = c.owner === human || c.acidBy === human;
-        if (mine || inView(c.x, c.y, c.r)) {
+        const seen = inView(c.x, c.y, c.r);
+        if (mine || seen) {
           burst(c.x, c.y, '#4ade80', 8, c.r * 0.15);
           addFloat(c.x, c.y - c.r - 20, '-' + fmt(loss), '#4ade80');
+          Sound.acidTick(mine ? 1 : 0.5);
         }
-        if (mine) Sound.acidTick();
       }
     }
     if (now > c.acidUntil + 0.05) c.acidUntil = 0;
+  }
+  // hielo: al acabarse la congelación el hielo se rompe (sigue azul y lenta hasta slowUntil)
+  for (const c of allCells) {
+    if (c.iceUntil && now >= c.iceUntil) {
+      c.iceUntil = 0;
+      if (c.owner === human || inView(c.x, c.y, c.r)) { burst(c.x, c.y, '#e0f2fe', 14, c.r * 0.35); Sound.iceBreak(); }
+    }
+    if (c.slowUntil && now >= c.slowUntil) c.slowUntil = 0;
   }
   // células con la bomba pegada: tic-tac y explosión
   for (const c of allCells) {
@@ -2177,7 +2331,7 @@ function moveCells(p, dt) {
         c.ha += clamp(diff * (1 - Math.exp(-dt * (p.urgent ? 20 : p.turnK))), -maxTurn, maxTurn);
         ux = Math.cos(c.ha); uy = Math.sin(c.ha);
       }
-      const sp = speedOf(c.mass) * mul * Math.min(1, d / (30 + c.r * 0.35));
+      const sp = speedOf(c.mass) * mul * Math.min(1, d / (30 + c.r * 0.35)) * (c.slowUntil > now ? (c.iceUntil > now ? 0 : ICE_SLOW_MUL) : 1);
       c.x += ux * sp * dt; c.y += uy * sp * dt;
     }
     c.x += c.vx * dt; c.y += c.vy * dt;
@@ -2220,6 +2374,8 @@ function moveCells(p, dt) {
       }
     }
   }
+  // congeladas: no se mueven nada (ni por empujes de sus piezas)
+  for (let i = 0; i < n; i++) { const c = cells[i]; if (c.iceUntil > now) { c.x = c.px; c.y = c.py; c.vx = c.vy = 0; } }
   const idt = 1 / dt;
   for (let i = 0; i < n; i++) {
     // Muros: la célula entera se queda dentro de la arena. Si ya estaba dentro, se detiene en el muro; si
@@ -2300,6 +2456,7 @@ function collide(dt) {
           a.mass += b.mass; a.r = radiusOf(a.mass); b.dead = true;
           if (b.bombAt && !a.bombAt) { a.bombAt = b.bombAt; a.bombBy = b.bombBy; }   // la bomba no se escapa uniéndose
           if (b.acidUntil > a.acidUntil) { a.acidUntil = b.acidUntil; a.acidNext = b.acidNext; a.acidBy = b.acidBy; }   // ni el ácido
+          if (b.slowUntil > a.slowUntil) { a.iceUntil = Math.max(a.iceUntil, b.iceUntil); a.slowUntil = b.slowUntil; }   // ni el hielo
         }
       } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
         if (d < a.r - b.r * EAT_COVER) eatCell(a, b);
@@ -2454,6 +2611,8 @@ function rebuildGraphics() {
   boltSprite = makeBoltSprite(160);
   bombSprite = makeBombSprite(160);
   acidSprite = makeAcidSprite(160);
+  iceSprite = makeIceSprite(160);
+  frostSprite = makeFrostSprite(256);
   pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
   pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
   pelletSprites = pelletSets[settings.theme];
@@ -2584,6 +2743,45 @@ function drawBoltAura(c, r, s) {
   ctx.restore();
 }
 
+// célula helada: congelada = capa de hielo con grietas y cristales; después, azul con copos mientras va lenta
+function drawIceAura(c, r, s) {
+  const frozen = c.iceUntil > now, left = c.slowUntil - now, fade = Math.min(1, left / 0.4);
+  ctx.save();
+  if (frozen) {
+    const k = Math.min(1, (now - (c.iceUntil - ICE_FREEZE)) / 0.2);          // el hielo «crece» al congelarse
+    const R = r * (1.02 + 0.03 * Math.sin(now * 3)) * (0.6 + 0.4 * k);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(frostSprite, c.x - R, c.y - R, R * 2, R * 2);
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = Math.max(3 / s, r * 0.06); ctx.strokeStyle = '#e0f2fe';
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.06 + 3 / s, 0, TAU); ctx.stroke();
+  } else {
+    ctx.globalAlpha = 0.72 * fade;
+    const g = ctx.createRadialGradient(c.x - r * 0.3, c.y - r * 0.3, r * 0.1, c.x, c.y, r);
+    g.addColorStop(0, '#bae6fd'); g.addColorStop(0.6, '#3b82f6'); g.addColorStop(1, '#1e3a8a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.7 * fade;
+    ctx.lineWidth = Math.max(2 / s, r * 0.035); ctx.strokeStyle = '#93c5fd';
+    ctx.setLineDash([r * 0.12, r * 0.1]); ctx.lineDashOffset = -now * r * 0.3;
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.04 + 3 / s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // copos que caen alrededor
+  ctx.fillStyle = '#f0f9ff';
+  for (let i = 0; i < 6; i++) {
+    const k = (now * 0.5 + i / 6 + c.id * 0.11) % 1;
+    ctx.globalAlpha = (1 - k) * 0.9 * fade;
+    ctx.beginPath(); ctx.arc(c.x + Math.sin(i * 2.7 + c.id + now) * r * 1.1, c.y - r * 1.1 + k * r * 2.2, Math.max(1.5 / s, r * 0.035), 0, TAU); ctx.fill();
+  }
+  // icono encima: copo mientras está congelada, tortuga mientras va lenta
+  const fs = Math.max(20 / s, r * 0.42);
+  ctx.globalAlpha = fade;
+  ctx.font = `900 ${Math.round(fs)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillText(frozen ? '❄' : '🐢', c.x, c.y - r - fs * 0.55 - (c.bombAt ? fs * 1.3 : 0) - (c.acidUntil > now ? fs * 1.1 : 0));
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
+}
+
 // célula envenenada: se tiñe de verde, burbujea, gotea y lleva una calavera encima
 function drawAcidAura(c, r, s) {
   const left = c.acidUntil - now, fade = Math.min(1, left / 0.4), pulse = 0.5 + 0.5 * Math.sin(now * 7 + c.id);
@@ -2673,6 +2871,7 @@ function drawCell(c, s) {
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
   }
   if (p.boostUntil > now) drawBoltAura(c, r, s);
+  if (c.slowUntil > now) drawIceAura(c, r, s);
   if (c.acidUntil > now) drawAcidAura(c, r, s);
   if (c.bombAt) drawBombAura(c, r, s);
   const holding = p.bomb && c === biggest(p);
@@ -2742,7 +2941,7 @@ function render() {
   // poderes: rayos y bombas (flotan, laten y se balancean)
   for (const o of powers) {
     if (o.dead) continue;
-    const bomb = o.type !== 'bolt', S = bomb ? BOMB_R * 2.9 : BOLT_R * 3.2;
+    const bomb = o.type !== 'bolt', S = o.type === 'bomb' ? BOMB_R * 2.9 : bomb ? BOMB_R * 3.3 : BOLT_R * 3.2;
     if (o.x + S < L || o.x - S > R || o.y + S < T || o.y - S > B) continue;
     const age = now - o.born, sc = (age < 0.4 ? age / 0.4 : 1) * (1 + Math.sin(now * 4 + o.ph) * 0.08);
     ctx.save();
@@ -2897,7 +3096,7 @@ function drawMinimap() {
     mctx.fillStyle = theme.mmVirus;
     mctx.fillRect(v.x * k - 1, v.y * k - 1, 2, 2);
   }
-  for (const o of powers) { if (o.dead) continue; mctx.fillStyle = o.type === 'bolt' ? '#facc15' : o.type === 'acid' ? '#a3e635' : '#f87171'; mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3); }
+  for (const o of powers) { if (o.dead) continue; mctx.fillStyle = o.type === 'bolt' ? '#facc15' : o.type === 'acid' ? '#a3e635' : o.type === 'ice' ? '#7dd3fc' : '#f87171'; mctx.fillRect(o.x * k - 1.5, o.y * k - 1.5, 3, 3); }
   for (const p of players) {
     if (!p.alive || p === human) continue;
     const c = biggest(p);
@@ -2973,21 +3172,30 @@ function updateHud(dt) {
     if (br.hidden === bl > 0) br.hidden = !(bl > 0);
     if (bl > 0) $('boltVal').textContent = fmtTime(Math.ceil(bl));
     // bomba: lista para lanzar, o pegada a una de tus células (cuenta atrás)
-    let hit = 0, acidLeft = 0;
-    if (human.alive) for (const c of human.cells) { if (c.bombAt) hit = Math.max(hit, c.bombAt - now); if (c.acidUntil) acidLeft = Math.max(acidLeft, c.acidUntil - now); }
-    const bRow = $('bombRow'), bShow = human.alive && (!!human.bomb || hit > 0 || acidLeft > 0);
+    let hit = 0, acidLeft = 0, iceLeft = 0, slowLeft = 0;
+    if (human.alive) for (const c of human.cells) {
+      if (c.bombAt) hit = Math.max(hit, c.bombAt - now);
+      if (c.acidUntil) acidLeft = Math.max(acidLeft, c.acidUntil - now);
+      if (c.iceUntil) iceLeft = Math.max(iceLeft, c.iceUntil - now);
+      if (c.slowUntil) slowLeft = Math.max(slowLeft, c.slowUntil - now);
+    }
+    const bRow = $('bombRow'), bShow = human.alive && (!!human.bomb || hit > 0 || acidLeft > 0 || slowLeft > 0);
     if (bRow.hidden === bShow) bRow.hidden = !bShow;
     if (bShow) {
       const key = inputMode === 'touch' ? ' · pulsa LANZAR' : ' · pulsa E';
       bRow.classList.toggle('hit', hit > 0);
-      bRow.classList.toggle('acid', hit <= 0 && (acidLeft > 0 || human.bomb === 'acid'));
+      const isAcid = hit <= 0 && (acidLeft > 0 || (slowLeft <= 0 && human.bomb === 'acid'));
+      bRow.classList.toggle('acid', isAcid);
+      bRow.classList.toggle('ice', hit <= 0 && !isAcid && (slowLeft > 0 || human.bomb === 'ice'));
       $('bombTxt').textContent = hit > 0 ? '💥 ¡Bomba! Explota en ' + Math.ceil(hit)
         : acidLeft > 0 ? '☠ ¡Envenenado! ' + Math.ceil(acidLeft) + ' s'
-        : human.bomb === 'acid' ? '🧪 Ácido' + key : '💣 Bomba' + key;
+        : iceLeft > 0 ? '❄ ¡Congelado! ' + Math.ceil(iceLeft) + ' s'
+        : slowLeft > 0 ? '🐢 Helado, vas lento ' + Math.ceil(slowLeft) + ' s'
+        : human.bomb === 'acid' ? '🧪 Ácido' + key : human.bomb === 'ice' ? '❄ Hielo' + key : '💣 Bomba' + key;
     }
     const bb = $('bombBtn'), bOn = state === 'playing' && human.alive && !!human.bomb;
     if (bb.classList.contains('show') !== bOn) bb.classList.toggle('show', bOn);
-    if (bOn && bb.classList.contains('acid') !== (human.bomb === 'acid')) bb.classList.toggle('acid', human.bomb === 'acid');
+    if (bOn && bb.dataset.k !== human.bomb) { bb.dataset.k = human.bomb; bb.classList.toggle('acid', human.bomb === 'acid'); bb.classList.toggle('ice', human.bomb === 'ice'); }
   }
   if (mmT <= 0) { mmT = 1 / 20; drawMinimap(); }
 }
@@ -3854,7 +4062,7 @@ setTimeout(hideSplash, 3000);
 
 // acceso de depuración desde la consola
 window.AgarNova = {
-  get state() { return state; }, players, human, stats, viruses, pellets, powers, thrown, dbg, settings, BOLT_TIME, BOLT_SPEED, throwBomb,
+  get state() { return state; }, players, human, stats, viruses, pellets, powers, thrown, dbg, settings, BOLT_TIME, BOLT_SPEED, throwBomb, Sound,
   get now() { return now; },
   get ejected() { return ejected.length; },
   get world() { return WORLD; },

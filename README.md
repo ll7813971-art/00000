@@ -64,8 +64,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   al reaparecer. Ningún bot lleva un color parecido al del jugador. Antes, con colores puramente al azar,
   en Ultra había ~220 parejas casi idénticas; ahora ninguna (también en partidas normales).
 - **Poderes:** el mapa tiene huecos de poder (8 en los mapas normales, 44 en Ultra). Cada hueco libre tira
-  cada 4 s: **30 % rayo**, **19 % bomba**, **11 % ácido** y, si no, se queda vacío hasta la siguiente tirada.
-  Salen en el minimapa (rayos en amarillo, bombas en rojo, ácido en verde).
+  cada 4 s: **30 % rayo**, **19 % bomba**, **11 % ácido**, **4 % hielo** y, si no, se queda vacío hasta la
+  siguiente tirada. Salen en el minimapa (rayos en amarillo, bombas en rojo, ácido en verde, hielo en azul).
   - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**, con una estela de su
     color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al cogerlo y, para el jugador,
     sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
@@ -79,7 +79,13 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   - **Ácido 🧪:** funciona como la bomba (se lleva en el centro de tu célula, botón **LANZAR** verde o tecla
     **E**, un solo uso y solo una cosa para lanzar a la vez), pero la célula alcanzada **se pone verde**, burbujea,
     gotea, lleva una calavera ☠ encima y **pierde el 8 % de su masa cada segundo durante 5 s** (se ve «-N» en
-    verde). Si te envenenan, el panel avisa «☠ ¡Envenenado! N s». Los bots también lo usan.
+    verde). Si te envenenan, el panel avisa «☠ ¡Envenenado! N s». Los bots también lo usan. Suena al cogerlo,
+    al lanzarlo, al dar (salpicadura con chisporroteo) y con cada mordisco del ácido («fsss» con burbujas). El
+    matraz lleva cristal grueso, líquido verde neón con brillo, etiqueta de calavera, tapón de corcho y una gota.
+  - **Hielo ❄:** igual que la bomba (botón **LANZAR** azul o **E**, un solo uso), pero la célula alcanzada
+    queda **congelada 3 s**: se cubre de hielo azul con grietas y cristales, lleva un copo ❄ encima y **no se
+    mueve nada**. Al romperse el hielo (crujido y esquirlas) **sigue azul y va muy lenta (30 %) otros 2 s**, con
+    una tortuga 🐢 encima. Si te congelan, el panel avisa «❄ ¡Congelado!» y luego «🐢 Helado, vas lento».
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
