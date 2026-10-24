@@ -737,6 +737,7 @@ let VIRUS_MIN = 22;
 let VIRUS_MAX = 36;
 let botSpriteSize = 192;     // tamaño del sprite de los bots (menor con muchos bots)
 const EAT_RATIO = 1.25;      // hay que ser 25% más grande para comer
+const EAT_COVER = 0.1;       // se come cuando el centro de la presa entra en el comedor (menos 0,1 del radio de la presa): ≈ la mitad de su superficie tapada
 const MAX_CELL_MASS = 22500;
 const BOOST_K = 5;           // amortiguación del impulso al dividirse
 const SPAWN_SHIELD = 3;      // segundos de protección al aparecer
@@ -1817,7 +1818,7 @@ function collide(dt) {
           a.mass += b.mass; a.r = radiusOf(a.mass); b.dead = true;
         }
       } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
-        if (d < a.r - b.r * 0.4) eatCell(a, b);
+        if (d < a.r - b.r * EAT_COVER) eatCell(a, b);
       } else if (a.r >= SOFT_R) {
         // No se pueden comer (tamaño parecido, o la otra tiene el escudo de aparición): chocan en vez de
         // atravesarse como fantasmas. El empuje es suave y la célula más ligera se aparta más.
@@ -1837,7 +1838,7 @@ function collide(dt) {
     if (a.mass >= VIRUS_MASS * 1.33) {
       for (const v of viruses) {
         if (v.dead || a.mass < v.m * 1.33) continue;
-        const lim = a.r - v.r * 0.4, dx = v.x - a.x, dy = v.y - a.y;
+        const lim = a.r - v.r * EAT_COVER, dx = v.x - a.x, dy = v.y - a.y;
         if (lim > 0 && dx * dx + dy * dy < lim * lim) { v.dead = true; popCell(a, v); break; }
       }
     }
