@@ -2542,27 +2542,31 @@ function drawCell(c, s) {
   }
   if (p.boostUntil > now) drawBoltAura(c, r, s);
   if (c.bombAt) drawBombAura(c, r, s);
-  if (p.bomb && c === biggest(p)) {               // la bomba que llevas, en el centro de tu célula
-    const S = Math.max(30 / s, r * 1.25);
+  const holding = p.bomb && c === biggest(p);
+  if (holding) {                                  // la bomba que llevas, en el centro de tu célula
+    const S = Math.max(30 / s, r * 0.82);
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(Math.sin(now * 3) * 0.15);
     ctx.drawImage(bombSprite, -S / 2, -S / 2, S, S); drawSpark(0, 0, S);
     ctx.restore();
     ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; lastFont = '';
   }
   if (sr > 13) {
+    // con la bomba en el centro, el nombre sube por encima de ella y la masa baja por debajo: no la tapan
     const ns = getNameSprite(p);
-    let h = r * 0.5, w = (h * ns.width) / ns.height;
-    if (w > r * 1.7) { w = r * 1.7; h = (w * ns.height) / ns.width; }
+    let h = r * (holding ? 0.3 : 0.5), w = (h * ns.width) / ns.height;
+    const maxW = r * (holding ? 1.45 : 1.7);
+    if (w > maxW) { w = maxW; h = (w * ns.height) / ns.width; }
     const showM = settings.showMass && sr > 22;
-    ctx.drawImage(ns, c.x - w / 2, c.y - h / 2 - (showM ? r * 0.1 : 0), w, h);
+    const ny = holding ? c.y - r * 0.62 : c.y - (showM ? r * 0.1 : 0);
+    ctx.drawImage(ns, c.x - w / 2, ny - h / 2, w, h);
     if (showM) {
-      const fs = Math.max(4, Math.round(r * 0.24));
+      const fs = Math.max(4, Math.round(r * (holding ? 0.19 : 0.24)));
       const f = `700 ${fs}px ${FONT}`;
       if (f !== lastFont) { ctx.font = f; lastFont = f; }
       ctx.lineWidth = fs * 0.14;
-      const t = fmt(c.mass);
-      ctx.strokeText(t, c.x, c.y + r * 0.34);
-      ctx.fillText(t, c.x, c.y + r * 0.34);
+      const t = fmt(c.mass), my = c.y + r * (holding ? 0.62 : 0.34);
+      ctx.strokeText(t, c.x, my);
+      ctx.fillText(t, c.x, my);
     }
   }
 }

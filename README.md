@@ -69,7 +69,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**, con una estela de su
     color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al cogerlo y, para el jugador,
     sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
-  - **Bomba 💣:** al tocarla aparece en el centro de tu célula (con la mecha encendida) y sale el botón
+  - **Bomba 💣:** al tocarla aparece en el centro de tu célula (con la mecha encendida; tu nombre sube por
+    encima de ella y la masa baja por debajo para no taparla) y sale el botón
     **LANZAR** (en PC también la tecla **E**). Se lanza hacia donde miras (el ratón o el joystick). Si toca
     una célula de otro jugador, esa célula recibe un **aura roja y una cuenta atrás de 3 s** encima y, al
     llegar a cero, una explosión (bola de fuego, onda, temblor de pantalla y sonido) la **revienta en mini
