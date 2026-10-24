@@ -48,6 +48,13 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   cuadrícula, FPS y calidad gráfica), clasificación con barras, minimapa, avisos de eliminaciones y de
   llegar al puesto 1, pausa con estadísticas y pantalla de muerte con resumen.
 - **Icono** propio (`icons/`): favicon, icono de pantalla de inicio para iOS/Android y marca dentro del juego.
+- **Bots más competitivos:** apuntan a donde estará la presa (no a donde está) y se dividen en cuanto una
+  presa pequeña queda a tiro; en partidas de 200 bots esto sube su relación eliminaciones/muertes de 0,93 a 1,07.
+- **Revisión de errores:** pruebas aleatorias de estrés (pausa, tema, ajustes, cambios de tamaño, muertes,
+  modos), simulaciones largas con comprobación de valores raros y fugas de memoria, almacenamiento bloqueado,
+  sin audio, apodos con código HTML y pantallas desde 320 px hasta 2560 px. Corregido: piezas que se
+  deslizaban fuera de la arena al amontonarse contra un muro, paneles que se pisaban en móviles de 320-360 px
+  y menú que se desbordaba en móviles apaisados muy pequeños.
 - Accesibilidad: foco visible, roles ARIA, navegación con teclado y respeto a «reducir movimiento».
 - Sonido sintetizado con WebAudio y vibración en móvil.
 - Equilibrio a largo plazo: la pérdida de masa aumenta si la arena se satura o un jugador se vuelve

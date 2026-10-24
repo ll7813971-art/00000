@@ -375,6 +375,9 @@ body.touch .only-pc{display:none}
 }
 
 @media (max-height:430px) and (orientation:landscape){
+  .lbl-skin{display:none}
+  #colorMode button{height:26px;font-size:12px}
+  #colorMode{padding:3px}
   .card{padding:12px;gap:8px}
   .avatar{width:42px;height:42px}
   .field input{height:42px;font-size:15px}
@@ -392,6 +395,25 @@ body.touch .only-pc{display:none}
   .sheet .btn-play{height:46px}
 }
 
+/* Móviles estrechos (320-380 px): paneles más compactos para que el contador y la clasificación no se pisen */
+@media (max-width:380px){
+  #leaderboard{width:140px}
+  #stats{min-width:0;padding:7px 10px 8px}
+  #massVal{font-size:23px}
+  #stats .srow{gap:8px}
+  #stats .srow b{font-size:12px}
+  #stats .srow span{font-size:8.5px;letter-spacing:.08em}
+  #notice{top:40%}
+}
+@media (max-width:340px){
+  #leaderboard{width:128px}
+  #stats .srow div:nth-child(3){display:none}
+}
+/* Móvil apaisado muy pequeño: una sola columna */
+@media (max-width:520px) and (orientation:landscape){
+  .menu-wrap{display:flex;flex-direction:column;max-width:420px}
+  .howto{display:none}
+}
 @keyframes flow{to{background-position:300% 0}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{0%{left:-60%}55%,100%{left:135%}}
@@ -483,7 +505,7 @@ body.touch .only-pc{display:none}
           <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
         </label>
       </div>
-      <div class="label">Skin <em id="skinName">Aurora</em></div>
+      <div class="label lbl-skin">Skin <em id="skinName">Aurora</em></div>
       <div id="colorMode" class="seg seg-sm" role="radiogroup" aria-label="Tipo de color">
         <button data-v="classic" role="radio">Colores</button>
         <button data-v="random" role="radio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg>Color aleatorio</button>
@@ -786,9 +808,11 @@ function hexToRgba(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-function makeCellSprite(sk, size) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = size;
+function makeCellSprite(sk, size, reuse) {
+  // Si se pasa un lienzo del mismo tamaño se reutiliza (los bots cambian de color al reaparecer
+  // muchas veces por minuto: así no se acumulan lienzos por recoger).
+  const cv = reuse && reuse.width === size ? reuse : document.createElement('canvas');
+  cv.width = cv.height = size;                    // asignar el tamaño también limpia el lienzo
   const g = cv.getContext('2d');
   const R = size / 2, bw = R * 0.075;
   // anillo exterior
@@ -958,12 +982,13 @@ class Player {
     this.giantK = 1;                      // freno de masa para jugadores descomunales
     this.smooth = true; this.urgent = false;   // bots: giran con inercia; urgent = huyendo de un peligro cercano
     this.turnK = 9; this.turnMax = 7;          // suavizado y giro máximo (rad/s) en marcha normal
+    this.hunt = true;                          // caza «de jugador»: intercepta y se divide en cuanto una presa pequeña está a tiro
     this.nameSprite = null;
     this.setSkin(skin);
   }
   setSkin(skin) {
     this.skin = skin;
-    this.sprite = makeCellSprite(skin, this.isBot ? botSpriteSize : 384);
+    this.sprite = makeCellSprite(skin, this.isBot ? botSpriteSize : 384, this.sprite);
     this.color = skin.rainbow ? '#c084fc' : `hsl(${skin.h1},${skin.s1 || 95}%,${Math.min(64, skin.l1 || 62)}%)`;
   }
   get mass() { let m = 0; for (const c of this.cells) m += c.mass; return m; }
@@ -1491,8 +1516,11 @@ function botThink(b) {
 
   // --- Persecución
   if (prey) {
-    const lead = smart && SMART.predict ? 0.22 + Math.min(0.28, Math.hypot(prey.x - big.x, prey.y - big.y) / 2600) : 0.15;
-    const px = prey.x + prey.mvx * lead, py = prey.y + prey.mvy * lead;
+    let lead = smart && SMART.predict ? 0.22 + Math.min(0.28, Math.hypot(prey.x - big.x, prey.y - big.y) / 2600) : 0.15;
+    if (b.hunt) {                          // apunta a donde estará la presa cuando llegue el cazador, no a donde está
+      lead = clamp(Math.hypot(prey.x - big.x, prey.y - big.y) / Math.max(60, speedOf(big.mass)), 0.12, 1.1) * 0.85;
+    }
+    const px = clamp(prey.x + prey.mvx * lead, 0, WORLD), py = clamp(prey.y + prey.mvy * lead, 0, WORLD);
     const dx = px - big.x, dy = py - big.y, d = Math.hypot(dx, dy) || 1;
     const value = Math.min(1, prey.mass / (big.mass * 0.15) + 0.2);
     const w = (0.9 + 2.3 * b.aggr * value) * (1 - threat * 0.8);
@@ -1585,7 +1613,7 @@ function botThink(b) {
       const hr = radiusOf(half);
       const dx = prey.x - big.x, dy = prey.y - big.y, d = Math.hypot(dx, dy);
       const reachS = hr * 0.9 + splitDistOf(hr) * 0.9;
-      if (d > big.r * 0.6 && d < reachS && Math.random() < (smart && SMART.split ? 0.92 : 0.3 + b.skill * 0.6)) {
+      if (d > big.r * 0.6 && d < reachS && Math.random() < (b.hunt && prey.mass < big.mass * 0.3 ? 0.97 : smart && SMART.split ? 0.92 : 0.3 + b.skill * 0.6)) {
         let risky = false;
         for (const e of qBufA) {
           if (e === prey || e.owner === b || e.dead) continue;
@@ -1707,13 +1735,16 @@ function moveCells(p, dt) {
   }
   const idt = 1 / dt;
   for (let i = 0; i < n; i++) {
-    // Muros: la célula entera se queda dentro de la arena. Si crece pegada al muro se desplaza hacia
-    // dentro poco a poco (no de golpe); si llega a él se detiene.
+    // Muros: la célula entera se queda dentro de la arena. Si ya estaba dentro, se detiene en el muro; si
+    // quedó a medias (porque creció o la empujan sus propias piezas) no puede avanzar más hacia fuera y
+    // vuelve hacia dentro poco a poco, sin saltos.
     const c = cells[i], m = Math.min(c.r, WORLD / 2 - 1);
-    if (c.x < m) { c.x = c.px >= m ? m : Math.min(m, c.x + 700 * dt); c.vx = Math.max(c.vx, 0); }
-    else if (c.x > WORLD - m) { c.x = c.px <= WORLD - m ? WORLD - m : Math.max(WORLD - m, c.x - 700 * dt); c.vx = Math.min(c.vx, 0); }
-    if (c.y < m) { c.y = c.py >= m ? m : Math.min(m, c.y + 700 * dt); c.vy = Math.max(c.vy, 0); }
-    else if (c.y > WORLD - m) { c.y = c.py <= WORLD - m ? WORLD - m : Math.max(WORLD - m, c.y - 700 * dt); c.vy = Math.min(c.vy, 0); }
+    const ease = gap => Math.min(gap * Math.min(1, dt * 8), 700 * dt);
+    if (c.x < m) { c.x = Math.max(c.x, Math.min(c.px, m)); c.x += ease(m - c.x); c.vx = Math.max(c.vx, 0); }
+    else if (c.x > WORLD - m) { c.x = Math.min(c.x, Math.max(c.px, WORLD - m)); c.x -= ease(c.x - (WORLD - m)); c.vx = Math.min(c.vx, 0); }
+    if (c.y < m) { c.y = Math.max(c.y, Math.min(c.py, m)); c.y += ease(m - c.y); c.vy = Math.max(c.vy, 0); }
+    else if (c.y > WORLD - m) { c.y = Math.min(c.y, Math.max(c.py, WORLD - m)); c.y -= ease(c.y - (WORLD - m)); c.vy = Math.min(c.vy, 0); }
+    c.x = clamp(c.x, 0, WORLD); c.y = clamp(c.y, 0, WORLD);   // pase lo que pase (p. ej. una pieza lanzada contra el muro), el centro nunca sale de la arena
     c.mvx += ((c.x - c.px) * idt - c.mvx) * 0.25;
     c.mvy += ((c.y - c.py) * idt - c.mvy) * 0.25;
   }
