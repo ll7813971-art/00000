@@ -506,7 +506,7 @@ body.touch .only-pc{display:none}
         <canvas id="avatar" class="avatar" width="112" height="112" aria-hidden="true"></canvas>
         <label class="field">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
-          <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
+          <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
         </label>
       </div>
       <div class="label lbl-skin">Skin <em id="skinName">Aurora</em></div>
@@ -1991,8 +1991,12 @@ const drawList = [];
 
 // Teclado del móvil: al escribir el apodo la ventana se acorta, pero el juego no debe reescalarse ni deformarse
 const isTyping = () => { const a = document.activeElement; return !!a && a.matches && a.matches('input[type=text],input:not([type]),textarea'); };
+let kbBase = null;   // tamaño de la ventana al abrirse el teclado (null = teclado cerrado)
 function resize() {
-  if (document.body.classList.contains('touch') && isTyping() && window.innerWidth === vw && window.innerHeight < vh) return;
+  if (kbBase) {
+    if (Math.abs(window.innerWidth - kbBase.w) <= 40) return;   // solo es el teclado (también en pantalla completa)
+    if (isTyping()) document.activeElement.blur();               // el móvil se ha girado: se cierra el teclado
+  }
   vw = window.innerWidth; vh = window.innerHeight;
   canvas.width = Math.round(vw * dpr);
   canvas.height = Math.round(vh * dpr);
@@ -2579,7 +2583,8 @@ window.addEventListener('keydown', e => {
   if (k === 'Escape' && settingsOpen) { closeSettings(); return; }
   const tag = e.target && e.target.tagName;
   if (tag === 'INPUT') {
-    if (k === 'Enter' && state === 'menu' && e.target.id === 'nick') startGame();
+    // en el móvil, «Hecho» del teclado solo termina de escribir; en PC, Enter empieza la partida
+    if (k === 'Enter' && state === 'menu' && e.target.id === 'nick') { if (inputMode === 'touch') e.target.blur(); else startGame(); }
     return;
   }
   // con un botón enfocado, Enter y Espacio lo activan de forma nativa (salvo en plena partida)
@@ -2606,16 +2611,16 @@ window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'W') inpu
 window.addEventListener('blur', () => { input.eject = false; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
 window.addEventListener('resize', resize);
-document.addEventListener('focusin', e => {
-  if (!document.body.classList.contains('touch') || !isTyping()) return;
+document.addEventListener('focusin', () => {
+  if (!document.body.classList.contains('touch') || !isTyping() || kbBase) return;
+  kbBase = { w: window.innerWidth, h: window.innerHeight };
   canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';   // el lienzo conserva su tamaño bajo el teclado
 });
 document.addEventListener('focusout', () => {
-  setTimeout(() => {
-    if (isTyping()) return;
-    canvas.style.width = ''; canvas.style.height = '';
-    resize();
-  }, 250);
+  if (!kbBase) return;
+  kbBase = null;
+  canvas.style.width = ''; canvas.style.height = '';
+  setTimeout(resize, 250);
 });
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
@@ -2758,8 +2763,9 @@ function buildUI() {
       else if (act === 'restartbg') restartBackground();
     });
   }
-  document.addEventListener('fullscreenchange', () => setTimeout(resize, 100));
-  document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 100));
+  const onFs = () => { if (isTyping()) document.activeElement.blur(); setTimeout(resize, 100); };
+  document.addEventListener('fullscreenchange', onFs);
+  document.addEventListener('webkitfullscreenchange', onFs);
 
   $('playBtn').addEventListener('click', () => startGame());
   $('againBtn').addEventListener('click', () => startGame(true));
