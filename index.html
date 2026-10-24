@@ -800,7 +800,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const $ = id => document.getElementById(id);
 const FONT = "Outfit, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-const fmt = n => Math.floor(n).toLocaleString('es-ES');
+const fmt = n => { n = Math.floor(n); if (n < 1000 && n > -1000) return '' + n; const s = '' + Math.abs(n); let o = ''; for (let i = 0; i < s.length; i++) { if (i && (s.length - i) % 3 === 0) o += '.'; o += s[i]; } return (n < 0 ? '-' : '') + o; };   // rápido: se usa en cada célula en cada fotograma
 const fmtK = n => (n >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + 'k' : fmt(n));
 const fmtTime = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const store = {
@@ -849,6 +849,10 @@ const ICE_CHANCE = 0.04;     // …hielo con un 4 %
 const ICE_FREEZE = 3;        // congelada (quieta) 3 s…
 const ICE_SLOW = 2;          // …y después muy lenta otros 2 s
 const ICE_SLOW_MUL = 0.3;    // velocidad mientras sigue helada
+const THROW_LIFE = 7;        // lo lanzado dura 7 s si no da a nadie (y se desvanece al final)
+const THROW_FADE = 1.5;      // segundos que tarda en desvanecerse
+const THROW_DAMP = 0.5;      // frenado del vuelo
+const THROW_BOUNCE = 0.85;   // velocidad que conserva al rebotar en un muro
 const MERGE_TIME = 30;       // segundos que tardan en poder unirse las piezas de una célula dividida
 const mergeTimeOf = m => MERGE_TIME;
 
@@ -1032,56 +1036,62 @@ function makeBombSprite(S) {
   return cv;
 }
 let bombSprite = makeBombSprite(160);
-// matraz de ácido: cristal grueso, líquido verde neón con brillo interior, etiqueta de calavera, tapón y gotas
+// matraz de ácido: cuello y cuerpo redondo de una sola pieza, líquido verde neón brillante, burbujas,
+// calavera pequeña en el líquido y tapón de corcho
 function makeAcidSprite(S) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
   const halo = g.createRadialGradient(S / 2, S * 0.62, S * 0.12, S / 2, S * 0.62, S * 0.5);
-  halo.addColorStop(0, 'rgba(132,204,22,0.55)'); halo.addColorStop(0.6, 'rgba(34,197,94,0.16)'); halo.addColorStop(1, 'rgba(34,197,94,0)');
+  halo.addColorStop(0, 'rgba(132,204,22,0.5)'); halo.addColorStop(0.6, 'rgba(34,197,94,0.15)'); halo.addColorStop(1, 'rgba(34,197,94,0)');
   g.fillStyle = halo; g.fillRect(0, 0, S, S);
-  const cx = S / 2, cy = S * 0.63, R = S * 0.28, nw = S * 0.14, top = S * 0.17;
-  const flask = () => { g.beginPath(); g.moveTo(cx - nw / 2, top); g.lineTo(cx - nw / 2, cy - R * 0.84); g.arc(cx, cy, R, -Math.PI / 2 - 0.52, -Math.PI / 2 + 0.52, true); g.lineTo(cx + nw / 2, top); g.closePath(); };
-  // sombra del cristal
-  flask(); g.lineWidth = S * 0.07; g.strokeStyle = 'rgba(5,46,22,0.55)'; g.stroke();
-  flask(); g.fillStyle = 'rgba(200,255,220,0.16)'; g.fill();
-  // líquido con brillo interior y superficie ondulada
+  const cx = S / 2, cy = S * 0.63, R = S * 0.29, nw = S * 0.15, top = S * 0.16;
+  const a0 = Math.asin((nw / 2) / R), yj = cy - R * Math.cos(a0);       // donde el cuello toca el cuerpo
+  const fil = S * 0.05;
+  const flask = () => {
+    g.beginPath();
+    g.moveTo(cx - nw / 2, top);
+    g.lineTo(cx - nw / 2, yj - fil);
+    const a1 = a0 + 0.42;                                               // hombro suave
+    g.quadraticCurveTo(cx - nw / 2, yj, cx - R * Math.sin(a1), cy - R * Math.cos(a1));
+    g.arc(cx, cy, R, -Math.PI / 2 - a1, -Math.PI / 2 + a1, true);
+    g.quadraticCurveTo(cx + nw / 2, yj, cx + nw / 2, yj - fil);
+    g.lineTo(cx + nw / 2, top);
+    g.closePath();
+  };
+  flask(); g.fillStyle = 'rgba(220,252,231,0.14)'; g.fill();
+  // líquido
   g.save(); flask(); g.clip();
-  const lvl = cy - R * 0.3;
-  const lq = g.createRadialGradient(cx - R * 0.2, cy + R * 0.1, R * 0.05, cx, cy, R * 1.05);
-  lq.addColorStop(0, '#ecfccb'); lq.addColorStop(0.28, '#a3e635'); lq.addColorStop(0.7, '#16a34a'); lq.addColorStop(1, '#052e16');
+  const lvl = cy - R * 0.38;
+  const lq = g.createLinearGradient(0, lvl, 0, cy + R);
+  lq.addColorStop(0, '#d9f99d'); lq.addColorStop(0.25, '#84cc16'); lq.addColorStop(0.75, '#16a34a'); lq.addColorStop(1, '#14532d');
   g.fillStyle = lq;
   g.beginPath(); g.moveTo(0, lvl);
-  for (let x = 0; x <= S; x += S / 16) g.lineTo(x, lvl + Math.sin(x / S * TAU * 2) * S * 0.012);
+  for (let x = 0; x <= S; x += S / 20) g.lineTo(x, lvl + Math.sin(x / S * TAU * 2.2) * S * 0.01);
   g.lineTo(S, S); g.lineTo(0, S); g.closePath(); g.fill();
-  g.fillStyle = 'rgba(236,252,203,0.55)';
-  g.fillRect(0, lvl - S * 0.006, S, S * 0.014);
-  for (const [bx, by, br] of [[0.38, 0.7, 0.028], [0.6, 0.76, 0.02], [0.53, 0.58, 0.016], [0.64, 0.64, 0.013], [0.44, 0.8, 0.012]]) {
-    g.beginPath(); g.arc(bx * S, by * S, br * S, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fill();
-  }
+  const glow = g.createRadialGradient(cx - R * 0.15, cy + R * 0.05, 0, cx, cy, R * 0.9);
+  glow.addColorStop(0, 'rgba(236,252,203,0.55)'); glow.addColorStop(1, 'rgba(236,252,203,0)');
+  g.fillStyle = glow; g.fillRect(0, lvl, S, S);
+  g.fillStyle = 'rgba(240,253,244,0.7)';
+  for (const [bx, by, br] of [[0.4, 0.74, 0.026], [0.6, 0.79, 0.018], [0.36, 0.6, 0.014], [0.64, 0.6, 0.02], [0.56, 0.86, 0.012]]) { g.beginPath(); g.arc(bx * S, by * S, br * S, 0, TAU); g.fill(); }
+  // calavera pequeña
+  const kx = cx, ky = cy + R * 0.18, k = R * 0.24;
+  g.fillStyle = 'rgba(20,83,45,0.85)';
+  g.beginPath(); g.arc(kx, ky - k * 0.1, k, 0, TAU); g.fill();
+  g.fillRect(kx - k * 0.55, ky + k * 0.5, k * 1.1, k * 0.55);
+  g.fillStyle = '#d9f99d';
+  g.beginPath(); g.arc(kx - k * 0.38, ky - k * 0.12, k * 0.26, 0, TAU); g.arc(kx + k * 0.38, ky - k * 0.12, k * 0.26, 0, TAU); g.fill();
   g.restore();
-  // etiqueta con calavera
-  const lx = cx, ly = cy + R * 0.28, lr = R * 0.36;
-  g.beginPath(); g.arc(lx, ly, lr, 0, TAU); g.fillStyle = 'rgba(20,20,20,0.82)'; g.fill();
-  g.lineWidth = S * 0.012; g.strokeStyle = '#d9f99d'; g.stroke();
-  g.fillStyle = '#ecfccb';
-  g.beginPath(); g.arc(lx, ly - lr * 0.12, lr * 0.52, 0, TAU); g.fill();
-  g.fillRect(lx - lr * 0.3, ly + lr * 0.2, lr * 0.6, lr * 0.32);
-  g.fillStyle = 'rgba(20,20,20,0.95)';
-  g.beginPath(); g.arc(lx - lr * 0.2, ly - lr * 0.15, lr * 0.13, 0, TAU); g.arc(lx + lr * 0.2, ly - lr * 0.15, lr * 0.13, 0, TAU); g.fill();
-  g.fillRect(lx - lr * 0.04, ly + lr * 0.22, lr * 0.08, lr * 0.28);
-  // borde del cristal y brillos
-  flask(); g.lineWidth = S * 0.024; g.strokeStyle = 'rgba(240,255,244,0.95)'; g.stroke();
-  g.beginPath(); g.ellipse(cx - R * 0.5, cy - R * 0.2, R * 0.1, R * 0.32, 0.45, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fill();
-  g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(cx - nw * 0.32, top + S * 0.03, nw * 0.12, (cy - R * 0.84) - top - S * 0.04);
+  // cristal: borde, brillo y boca
+  flask(); g.lineWidth = S * 0.026; g.lineJoin = 'round'; g.strokeStyle = 'rgba(240,253,244,0.95)'; g.stroke();
+  g.beginPath(); g.arc(cx, cy, R * 0.78, Math.PI * 1.08, Math.PI * 1.42); g.lineWidth = S * 0.03; g.lineCap = 'round'; g.strokeStyle = 'rgba(255,255,255,0.6)'; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(cx - nw * 0.3, top + S * 0.03, nw * 0.13, yj - top - S * 0.06);
+  g.beginPath(); g.ellipse(cx, top, nw * 0.62, S * 0.022, 0, 0, TAU); g.fillStyle = 'rgba(240,253,244,0.95)'; g.fill();
   // tapón de corcho
-  const cg = g.createLinearGradient(0, S * 0.08, 0, S * 0.2);
-  cg.addColorStop(0, '#d6a35c'); cg.addColorStop(1, '#854d0e');
+  const cg = g.createLinearGradient(cx - nw / 2, 0, cx + nw / 2, 0);
+  cg.addColorStop(0, '#a16207'); cg.addColorStop(0.5, '#d6a35c'); cg.addColorStop(1, '#854d0e');
   g.fillStyle = cg;
-  g.beginPath(); g.moveTo(cx - nw * 0.68, S * 0.09); g.lineTo(cx + nw * 0.68, S * 0.09); g.lineTo(cx + nw * 0.56, S * 0.2); g.lineTo(cx - nw * 0.56, S * 0.2); g.closePath(); g.fill();
-  // gota que resbala
-  g.fillStyle = '#84cc16';
-  g.beginPath(); g.moveTo(cx + nw * 0.5, S * 0.24); g.quadraticCurveTo(cx + nw * 0.85, S * 0.33, cx + nw * 0.62, S * 0.36); g.quadraticCurveTo(cx + nw * 0.38, S * 0.33, cx + nw * 0.5, S * 0.24); g.fill();
+  g.beginPath(); g.moveTo(cx - nw * 0.42, top); g.lineTo(cx - nw * 0.5, S * 0.06); g.quadraticCurveTo(cx, S * 0.035, cx + nw * 0.5, S * 0.06); g.lineTo(cx + nw * 0.42, top); g.closePath(); g.fill();
   return cv;
 }
 let acidSprite = makeAcidSprite(160);
@@ -1507,7 +1517,7 @@ function throwBomb(p, ax, ay) {
   const nx = dx / d, ny = dy / d, sp = 1500 + c.r * 1.6;
   const kind = p.bomb;
   p.bomb = false;
-  thrown.push({ kind, x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, dead: false });
+  thrown.push({ kind, x: c.x, y: c.y, vx: nx * sp + c.mvx * 0.4, vy: ny * sp + c.mvy * 0.4, owner: p, born: now, rot: 0, bounces: 0, dead: false });
   if (p === human) { kind === 'acid' ? Sound.acidThrow() : kind === 'ice' ? Sound.iceThrow() : Sound.bombThrow(); vibrate(12); }
   dbg.bombsThrown = (dbg.bombsThrown || 0) + 1;
   return true;
@@ -1567,15 +1577,85 @@ function botBomb(b) {
   const t = Math.hypot(best.x - big.x, best.y - big.y) / sp;
   throwBomb(b, best.x + best.mvx * t, best.y + best.mvy * t);
 }
+const qBufP = [];
+function hitThrown(t, c) {
+  const acid = t.kind === 'acid', ice = t.kind === 'ice';
+  t.dead = true;
+  const heard = c.owner === human || t.owner === human || inView(c.x, c.y, c.r);
+  if (acid) {                                       // ácido: la célula se pone verde y pierde masa cada segundo
+    c.acidUntil = now + ACID_TIME; c.acidNext = now + 1; c.acidBy = t.owner;
+    shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#4ade80' });
+    burst(t.x, t.y, '#4ade80', 16, 30); burst(t.x, t.y, '#bef264', 8, 20);
+    if (heard) Sound.acidHit();
+    if (c.owner === human) vibrate([20, 20, 40]);
+    dbg.acidHits = (dbg.acidHits || 0) + 1;
+  } else if (ice) {                                 // hielo: azul y quieta 3 s, luego muy lenta 2 s
+    c.iceUntil = now + ICE_FREEZE; c.slowUntil = now + ICE_FREEZE + ICE_SLOW;
+    c.vx = c.vy = 0;
+    shocks.push({ x: c.x, y: c.y, t0: now, r: Math.max(70, c.r * 1.2), col: '#7dd3fc' });
+    burst(t.x, t.y, '#e0f2fe', 18, 30); burst(c.x, c.y, '#7dd3fc', 14, c.r * 0.3);
+    if (heard) Sound.iceHit();
+    if (c.owner === human) vibrate([40, 30, 40]);
+    dbg.iceHits = (dbg.iceHits || 0) + 1;
+  } else {
+    c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
+    shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
+    burst(t.x, t.y, '#ef4444', 10, 20);
+    if (c.owner === human) { Sound.bombHit(); vibrate([30, 30, 30]); }
+    else if (t.owner === human) Sound.bombHit();
+  }
+}
 function updatePowers(dt) {
-  // recoger: basta con que la célula toque el poder (una bomba solo si no llevas ya otra)
+  // Una sola pasada por todas las células: efectos con tiempo (ácido, hielo, bomba), estela del rayo y el
+  // radio mayor (para buscar en la rejilla en vez de recorrer todas las células por cada poder)
+  let maxR = 0;
+  for (let i = 0; i < allCells.length; i++) {
+    const c = allCells[i];
+    if (c.dead) continue;
+    if (c.r > maxR) maxR = c.r;
+    if (c.acidUntil) {                                  // ácido: cada segundo pierde masa (5 veces)
+      if (now >= c.acidNext && c.acidNext <= c.acidUntil + 0.01) {
+        c.acidNext += 1;
+        const loss = Math.min(c.mass - 10, Math.max(2, c.mass * ACID_RATE));
+        if (loss > 0) {
+          c.mass -= loss; c.r = radiusOf(c.mass);
+          const mine = c.owner === human || c.acidBy === human;
+          if (mine || inView(c.x, c.y, c.r)) {
+            burst(c.x, c.y, '#4ade80', 8, c.r * 0.15);
+            addFloat(c.x, c.y - c.r - 20, '-' + fmt(loss), '#4ade80');
+            Sound.acidTick(mine ? 1 : 0.5);
+          }
+        }
+      }
+      if (now > c.acidUntil + 0.05) c.acidUntil = 0;
+    }
+    if (c.iceUntil && now >= c.iceUntil) {              // el hielo se rompe (sigue azul y lenta hasta slowUntil)
+      c.iceUntil = 0;
+      if (c.owner === human || inView(c.x, c.y, c.r)) { burst(c.x, c.y, '#e0f2fe', 14, c.r * 0.35); Sound.iceBreak(); }
+    }
+    if (c.slowUntil && now >= c.slowUntil) c.slowUntil = 0;
+    if (c.bombAt) {                                     // bomba pegada: tic-tac y explosión
+      const left = c.bombAt - now;
+      if (left <= 0) explodeCell(c);
+      else { const sec = Math.ceil(left); if (sec !== c.bombSec) { c.bombSec = sec; if (c.owner === human || c.bombBy === human) Sound.tick(sec); } }
+    }
+    if (c.owner.boostUntil > now) {                     // estela de quien va con el rayo
+      if (!c.trail) c.trail = [];
+      c.trailT -= dt;
+      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.push(c.x, c.y); if (c.trail.length > 36) c.trail.splice(0, 2); }
+    } else if (c.trail && c.trail.length) {
+      c.trailT -= dt;
+      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.splice(0, 2); }   // al acabarse, la estela se recoge
+    }
+  }
+  // recoger: basta con que la célula toque el poder (solo se lleva una cosa para lanzar)
   for (const o of powers) {
     if (o.dead) continue;
     const pr = o.type === 'bolt' ? BOLT_R : BOMB_R;
-    for (const c of allCells) {
-      if (o.type !== 'bolt' && c.owner.bomb) continue;   // solo se lleva una cosa para lanzar
+    cellGrid.query(o.x, o.y, maxR + pr, qBufP);
+    for (const c of qBufP) {
+      if (c.dead || (o.type !== 'bolt' && c.owner.bomb)) continue;
       const lim = c.r + pr * 0.6, dx = c.x - o.x, dy = c.y - o.y;
-      if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
       if (dx * dx + dy * dy < lim * lim) { pickPower(o, c); break; }
     }
   }
@@ -1584,99 +1664,30 @@ function updatePowers(dt) {
     nextPowerRoll = now + 4;
     for (let i = powers.length; i < powerSlots; i++) { const t = rollPower(); if (t) spawnPower(t); }
   }
-  // bombas en vuelo
-  const damp = Math.exp(-1.25 * dt);
+  // lanzados en vuelo: rebotan en los muros y, si no dan a nadie en 7 s, se desvanecen
+  const damp = Math.exp(-THROW_DAMP * dt), wr = BOMB_R * 0.6;
   for (const t of thrown) {
     if (t.dead) continue;
-    t.x += t.vx * dt; t.y += t.vy * dt; t.vx *= damp; t.vy *= damp; t.rot += dt * 9;
-    if (t.x < 0 || t.y < 0 || t.x > WORLD || t.y > WORLD || now - t.born > 1.7) {   // no tocó a nadie: se apaga
-      t.dead = true; burst(clamp(t.x, 0, WORLD), clamp(t.y, 0, WORLD), '#9ca3af', 8, 10); continue;
+    t.x += t.vx * dt; t.y += t.vy * dt; t.vx *= damp; t.vy *= damp; t.rot += dt * (3 + Math.hypot(t.vx, t.vy) / 220);
+    if (t.x < wr) { t.x = wr; t.vx = Math.abs(t.vx) * THROW_BOUNCE; t.bounces++; }
+    else if (t.x > WORLD - wr) { t.x = WORLD - wr; t.vx = -Math.abs(t.vx) * THROW_BOUNCE; t.bounces++; }
+    if (t.y < wr) { t.y = wr; t.vy = Math.abs(t.vy) * THROW_BOUNCE; t.bounces++; }
+    else if (t.y > WORLD - wr) { t.y = WORLD - wr; t.vy = -Math.abs(t.vy) * THROW_BOUNCE; t.bounces++; }
+    if (now - t.born > THROW_LIFE) { t.dead = true; continue; }
+    if (Math.random() < 0.4 && inView(t.x, t.y, 200) && particles.length < particleCap) {
+      particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: t.kind === 'acid' ? 'rgba(74,222,128,0.85)' : t.kind === 'ice' ? 'rgba(224,242,254,0.9)' : 'rgba(160,160,170,0.8)' });
     }
-    const acid = t.kind === 'acid', ice = t.kind === 'ice';
-    if (Math.random() < 0.5) particles.length < particleCap && particles.push({ x: t.x, y: t.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0, max: 0.45, r: rand(5, 9), color: acid ? 'rgba(74,222,128,0.85)' : ice ? 'rgba(224,242,254,0.9)' : 'rgba(160,160,170,0.8)' });
-    for (const c of allCells) {
+    cellGrid.query(t.x, t.y, maxR + BOMB_R, qBufP);
+    for (const c of qBufP) {
       if (c.owner === t.owner || c.dead || (t.kind === 'bomb' && c.bombAt) || c.owner.protectUntil > now) continue;
       const lim = c.r + BOMB_R * 0.5, dx = c.x - t.x, dy = c.y - t.y;
-      if (dx > lim || dx < -lim || dy > lim || dy < -lim) continue;
-      if (dx * dx + dy * dy < lim * lim) {
-        t.dead = true;
-        const heard = c.owner === human || t.owner === human || inView(c.x, c.y, c.r);
-        if (acid) {                                       // ácido: la célula se pone verde y pierde masa cada segundo
-          c.acidUntil = now + ACID_TIME; c.acidNext = now + 1; c.acidBy = t.owner;
-          shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#4ade80' });
-          burst(t.x, t.y, '#4ade80', 16, 30); burst(t.x, t.y, '#bef264', 8, 20);
-          if (heard) Sound.acidHit();
-          if (c.owner === human) vibrate([20, 20, 40]);
-          dbg.acidHits = (dbg.acidHits || 0) + 1;
-        } else if (ice) {                                 // hielo: azul y quieta 3 s, luego muy lenta 2 s
-          c.iceUntil = now + ICE_FREEZE; c.slowUntil = now + ICE_FREEZE + ICE_SLOW;
-          c.vx = c.vy = 0;
-          shocks.push({ x: c.x, y: c.y, t0: now, r: Math.max(70, c.r * 1.2), col: '#7dd3fc' });
-          burst(t.x, t.y, '#e0f2fe', 18, 30); burst(c.x, c.y, '#7dd3fc', 14, c.r * 0.3);
-          if (heard) Sound.iceHit();
-          if (c.owner === human) vibrate([40, 30, 40]);
-          dbg.iceHits = (dbg.iceHits || 0) + 1;
-        } else {
-          c.bombAt = now + BOMB_FUSE; c.bombBy = t.owner;   // cuenta atrás de 3 s y aura roja
-          shocks.push({ x: t.x, y: t.y, t0: now, r: Math.max(60, c.r * 0.9), col: '#ef4444' });
-          burst(t.x, t.y, '#ef4444', 10, 20);
-          if (c.owner === human) { Sound.bombHit(); vibrate([30, 30, 30]); }
-          else if (t.owner === human) Sound.bombHit();
-        }
-        break;
-      }
+      if (dx * dx + dy * dy < lim * lim) { hitThrown(t, c); break; }
     }
   }
   for (let i = thrown.length - 1; i >= 0; i--) if (thrown[i].dead) thrown.splice(i, 1);
-  // células envenenadas con ácido: cada segundo pierden masa (5 veces)
-  for (const c of allCells) {
-    if (!c.acidUntil) continue;
-    if (now >= c.acidNext && c.acidNext <= c.acidUntil + 0.01) {
-      c.acidNext += 1;
-      const loss = Math.min(c.mass - 10, Math.max(2, c.mass * ACID_RATE));
-      if (loss > 0) {
-        c.mass -= loss; c.r = radiusOf(c.mass);
-        const mine = c.owner === human || c.acidBy === human;
-        const seen = inView(c.x, c.y, c.r);
-        if (mine || seen) {
-          burst(c.x, c.y, '#4ade80', 8, c.r * 0.15);
-          addFloat(c.x, c.y - c.r - 20, '-' + fmt(loss), '#4ade80');
-          Sound.acidTick(mine ? 1 : 0.5);
-        }
-      }
-    }
-    if (now > c.acidUntil + 0.05) c.acidUntil = 0;
-  }
-  // hielo: al acabarse la congelación el hielo se rompe (sigue azul y lenta hasta slowUntil)
-  for (const c of allCells) {
-    if (c.iceUntil && now >= c.iceUntil) {
-      c.iceUntil = 0;
-      if (c.owner === human || inView(c.x, c.y, c.r)) { burst(c.x, c.y, '#e0f2fe', 14, c.r * 0.35); Sound.iceBreak(); }
-    }
-    if (c.slowUntil && now >= c.slowUntil) c.slowUntil = 0;
-  }
-  // células con la bomba pegada: tic-tac y explosión
-  for (const c of allCells) {
-    if (!c.bombAt) continue;
-    const left = c.bombAt - now;
-    if (left <= 0) { explodeCell(c); continue; }
-    const sec = Math.ceil(left);
-    if (sec !== c.bombSec) { c.bombSec = sec; if (c.owner === human || c.bombBy === human) Sound.tick(sec); }
-  }
   for (let i = shocks.length - 1; i >= 0; i--) if (now - shocks[i].t0 > 0.6) shocks.splice(i, 1);
   for (let i = booms.length - 1; i >= 0; i--) if (now - booms[i].t0 > 0.7) booms.splice(i, 1);
   if (shakeT > 0) shakeT -= dt;
-  // estela de quien va con el rayo
-  for (const c of allCells) {
-    if (boosted(c.owner)) {
-      if (!c.trail) { c.trail = []; c.trailT = 0; }
-      c.trailT -= dt;
-      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.push(c.x, c.y); if (c.trail.length > 36) c.trail.splice(0, 2); }
-    } else if (c.trail && c.trail.length) {
-      c.trailT -= dt;
-      if (c.trailT <= 0) { c.trailT = 0.028; c.trail.splice(0, 2); }   // al acabarse, la estela se recoge
-    }
-  }
   if (human.boostUntil && now >= human.boostUntil) {
     human.boostUntil = 0;
     if (human.alive) { Sound.powerEnd(); const b = biggest(human); if (b) addFloat(b.x, b.y - b.r - 30, 'Fin del rayo'); }
@@ -1695,7 +1706,8 @@ function uniqueSkin(self) {
   for (const p of players) if (p !== self && p.skin && (p.alive || p === human)) taken.push(p.skin);
   if (settings.randomColor && settings.rolled && self !== human) taken.push(settings.rolled);
   let best = null, bestD = -1;
-  for (let k = 0; k < 64; k++) {
+  const tries = players.length > 60 ? 24 : 64;
+  for (let k = 0; k < tries; k++) {
     const sk = randomSkin();
     let near = Infinity;
     for (const t of taken) { const d = skinDist(sk, t); if (d < near) near = d; }
@@ -2019,7 +2031,9 @@ function scanEscape(big, list, caution, awayX, awayY) {
 function botThink(b) {
   const cells = b.cells, n = cells.length;
   const smart = b.iq >= 2;                // modo Ultra
-  b.nextThink = now + (smart && SMART.fast ? 0.04 : 0.06 + (1 - b.skill) * 0.2) * rand(0.8, 1.25);
+  // los bots lejos de la pantalla piensan con menos frecuencia (no se nota y ahorra mucho con 200 bots)
+  const c0 = cells[0], lod = players.length > 60 && c0 && !inView(c0.x, c0.y, 1600) ? 2.4 : 1;
+  b.nextThink = now + (smart && SMART.fast ? 0.04 : 0.06 + (1 - b.skill) * 0.2) * rand(0.8, 1.25) * lod;
 
   let mx = 0, my = 0, tm = 0, sr = 0, big = cells[0];
   for (const c of cells) { mx += c.x * c.mass; my += c.y * c.mass; tm += c.mass; sr += c.r; if (c.mass > big.mass) big = c; }
@@ -3018,7 +3032,8 @@ function render() {
   for (const t of thrown) {
     const S = BOMB_R * 2.6;
     if (t.x + S < L || t.x - S > R || t.y + S < T || t.y - S > B) continue;
-    ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.rot);
+    const fadeK = clamp((THROW_LIFE - (now - t.born)) / THROW_FADE, 0, 1);   // se desvanece poco a poco
+    ctx.save(); ctx.globalAlpha = fadeK; ctx.translate(t.x, t.y); ctx.rotate(t.rot);
     ctx.drawImage(throwSprite(t.kind), -S / 2, -S / 2, S, S); drawThrowFx(t.kind, 0, 0, S);
     ctx.restore();
   }
@@ -3037,6 +3052,9 @@ function render() {
       lastFont = '';
     } else drawCell(o, s);
   }
+
+  // flecha de puntería: sale de tu célula mayor y apunta hacia donde miras (ahí va lo que lances)
+  if (human.alive && human.cells.length && (state === 'playing' || state === 'paused')) drawAimArrow(s);
 
   // partículas
   for (const p of particles) {
@@ -3079,6 +3097,35 @@ function render() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = vigGrad;
   ctx.fillRect(0, 0, vw, vh);
+}
+
+function drawAimArrow(s) {
+  const c = biggest(human);
+  if (!c) return;
+  let dx, dy;
+  if (inputMode === 'touch') { dx = human.lastDx || 0; dy = human.lastDy || 0; if (!dx && !dy) dx = 1; }
+  else { dx = human.tx - c.x; dy = human.ty - c.y; }
+  const d = Math.hypot(dx, dy);
+  if (d < 1) return;
+  const ux = dx / d, uy = dy / d, r = c.dr;
+  const L = Math.max(30 / s, r * 0.36), W = L * 0.85, gap = Math.max(10 / s, r * 0.1) + Math.sin(now * 5) * L * 0.08;
+  const bx = c.x + ux * (r + gap), by = c.y + uy * (r + gap);   // base de la flecha, junto al borde
+  const tx = bx + ux * L, ty = by + uy * L, px = -uy, py = ux;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(bx + px * W / 2, by + py * W / 2);
+  ctx.lineTo(bx + ux * L * 0.3, by + uy * L * 0.3);
+  ctx.lineTo(bx - px * W / 2, by - py * W / 2);
+  ctx.closePath();
+  ctx.globalAlpha = 0.3;                                         // brillo
+  ctx.lineJoin = 'round'; ctx.lineWidth = L * 0.45; ctx.strokeStyle = human.color; ctx.stroke();
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = human.bomb === 'acid' ? '#86efac' : human.bomb === 'ice' ? '#bae6fd' : human.bomb ? '#fca5a5' : '#ffffff';
+  ctx.fill();
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2 / s, L * 0.1); ctx.strokeStyle = human.color;
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawMinimap() {
@@ -3584,6 +3631,7 @@ function applyTheme(name, persist) {
 
 function applyQuality() {
   dprMax = settings.quality === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+  simStep = settings.quality === 'low' ? 1 / 30 : STEP;
   dpr = dprMax;
   particleCap = settings.quality === 'low' ? 140 : 420;
   resize();
@@ -4002,8 +4050,9 @@ function syncUI() {
    BUCLE PRINCIPAL
    ===================================================================== */
 let last = performance.now();
-let fpsAcc = 0, fpsN = 0, slowChecks = 0;
+let fpsAcc = 0, fpsN = 0, slowChecks = 0, fastChecks = 0;
 const STEP = 1 / 60;
+let simStep = STEP;   // en dispositivos lentos la simulación da pasos de 1/30 s (la mitad de trabajo)
 
 function frame(t) {
   requestAnimationFrame(frame);
@@ -4019,21 +4068,37 @@ function frame(t) {
     const fps = fpsN / fpsAcc;
     el.fps.textContent = Math.round(fps) + ' FPS';
     checkGraphics();
-    if (settings.quality === 'auto' && fps < 42 && dpr > 1 && !kbBase) { if (++slowChecks >= 2) { dpr = Math.max(1, dpr - 0.5); resize(); slowChecks = 0; } }
-    else slowChecks = 0;
+    if (settings.quality === 'auto' && fps < 42 && !kbBase) {
+      if (++slowChecks >= 2) {
+        slowChecks = 0;
+        if (simStep === STEP) simStep = 1 / 30;                               // 1.º: menos pasos de simulación
+        else if (dpr > 1) { dpr = Math.max(1, dpr - 0.5); resize(); }        // 2.º: menos resolución
+        else if (fps < 30 && dpr > 0.75) { dpr = 0.75; resize(); }          // 3.º: algo por debajo de la nativa
+      }
+      fastChecks = 0;
+    } else {
+      slowChecks = 0;
+      if (fps > 55 && simStep !== STEP && ++fastChecks >= 4) { simStep = STEP; fastChecks = 0; }   // si va sobrado, vuelve a 60 pasos
+    }
     fpsAcc = 0; fpsN = 0;
   }
 
   if (state !== 'paused') {
-    const steps = Math.min(6, Math.ceil(dt / STEP - 0.01));
+    const steps = Math.min(4, Math.ceil(dt / simStep - 0.01));   // con el móvil lento no se acumulan pasos (evita tirones en cadena)
     const sdt = dt / steps;
+    const t0 = performance.now();
     for (let i = 0; i < steps; i++) update(sdt);
+    dbg.tSim = (dbg.tSim || 0) * 0.95 + (performance.now() - t0) * 0.05;
   }
   if (state === 'dying') { dyingT -= dt; if (dyingT <= 0) showDeath(); }
 
   updateCamera(dt);
+  const t1 = performance.now();
   render();
+  const t2 = performance.now();
   if (state === 'playing' || state === 'dying' || state === 'paused') updateHud(dt);
+  dbg.tRender = (dbg.tRender || 0) * 0.95 + (t2 - t1) * 0.05;
+  dbg.tHud = (dbg.tHud || 0) * 0.95 + (performance.now() - t2) * 0.05;
 }
 
 /* =====================================================================

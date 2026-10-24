@@ -81,11 +81,20 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
     gotea, lleva una calavera ☠ encima y **pierde el 8 % de su masa cada segundo durante 5 s** (se ve «-N» en
     verde). Si te envenenan, el panel avisa «☠ ¡Envenenado! N s». Los bots también lo usan. Suena al cogerlo,
     al lanzarlo, al dar (salpicadura con chisporroteo) y con cada mordisco del ácido («fsss» con burbujas). El
-    matraz lleva cristal grueso, líquido verde neón con brillo, etiqueta de calavera, tapón de corcho y una gota.
+    matraz es de una sola pieza (cuello y cuerpo redondo), con líquido verde neón brillante, burbujas, una
+    calavera pequeña y tapón de corcho.
   - **Hielo ❄:** igual que la bomba (botón **LANZAR** azul o **E**, un solo uso), pero la célula alcanzada
     queda **congelada 3 s**: se cubre de hielo azul con grietas y cristales, lleva un copo ❄ encima y **no se
     mueve nada**. Al romperse el hielo (crujido y esquirlas) **sigue azul y va muy lenta (30 %) otros 2 s**, con
     una tortuga 🐢 encima. Si te congelan, el panel avisa «❄ ¡Congelado!» y luego «🐢 Helado, vas lento».
+- **Lanzamientos:** lo que lanzas (bomba, ácido, hielo) rebota en los muros y, si en **7 s** no da a nadie, se
+  desvanece poco a poco. Después de rebotar todavía puede dar a alguien.
+- **Flecha de puntería:** tu célula mayor lleva una flecha que apunta hacia donde miras (el ratón o el
+  joystick); su color cambia según lo que lleves para lanzar.
+- **Menos lag:** los bots lejos de la pantalla piensan con menos frecuencia, los poderes buscan células en la
+  rejilla en vez de recorrerlas todas, los números se formatean sin `toLocaleString` y, si el dispositivo va
+  lento, la simulación pasa a pasos de 1/30 s y no acumula más de 4 pasos por fotograma (luego baja la
+  resolución). En un móvil simulado 4 veces más lento, Ultra pasa de ~20 a ~43 FPS.
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
