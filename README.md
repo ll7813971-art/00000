@@ -90,7 +90,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Lanzamientos:** lo que lanzas (bomba, ácido, hielo) rebota en los muros y, si en **7 s** no da a nadie, se
   desvanece poco a poco. Después de rebotar todavía puede dar a alguien.
 - **Flecha de puntería:** tu célula mayor lleva una flecha que apunta hacia donde miras (el ratón o el
-  joystick); su color cambia según lo que lleves para lanzar.
+  joystick); su color cambia según lo que lleves para lanzar. Gira con suavidad, se queda quieta si el ratón
+  está encima de la célula y no salta entre piezas parecidas (así no parpadea).
 - **Menos lag:** los bots lejos de la pantalla piensan con menos frecuencia, los poderes buscan células en la
   rejilla en vez de recorrerlas todas, los números se formatean sin `toLocaleString` y, si el dispositivo va
   lento, la simulación pasa a pasos de 1/30 s y no acumula más de 4 pasos por fotograma (luego baja la

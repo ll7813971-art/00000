@@ -1318,6 +1318,7 @@ class Player {
     this.boostUntil = 0;                  // rayo: velocidad x1.5 hasta este momento
     this.bomb = false;                    // lo que lleva para lanzar: false, 'bomb', 'acid' o 'ice'
     this.bombSince = 0; this.nextBombCheck = 0;
+    this.aimA = NaN; this.aimCell = null; // puntería (solo el jugador)
     this.nextEject = 0;
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
@@ -1510,6 +1511,7 @@ function throwBomb(p, ax, ay) {
   const c = biggest(p);
   let dx, dy;
   if (ax !== undefined) { dx = ax - c.x; dy = ay - c.y; }
+  else if (p === human && human.aimA === human.aimA) { dx = Math.cos(human.aimA); dy = Math.sin(human.aimA); }   // hacia donde apunta la flecha
   else if (p === human && inputMode === 'touch') { dx = human.lastDx || 0; dy = human.lastDy || 0; if (!dx && !dy) dx = 1; }
   else { dx = p.tx - c.x; dy = p.ty - c.y; }
   let d = Math.hypot(dx, dy);
@@ -2320,9 +2322,34 @@ function humanActions() {
     human.ty = cam.y + (input.my - vh / 2) / cam.s;
     human.speedMul = 1;
   }
+  updateAim();
   while (input.split > 0) { input.split--; splitPlayer(human); }
   if (input.throw) { input.throw = false; throwBomb(human); }
   if (input.eject && now >= human.nextEject) { eject(human); human.nextEject = now + 0.075; }
+}
+
+// Dirección a la que mira el jugador (la flecha y los lanzamientos). Con el ratón muy cerca de la célula
+// (o dentro de ella) se mantiene la última dirección: antes la flecha saltaba de lado a lado y parpadeaba.
+// pieza de la que sale la flecha: la mayor, pero sin saltar entre piezas de tamaño parecido
+function aimCell() {
+  const big = biggest(human);
+  let c = human.aimCell;
+  if (!c || c.dead || c.owner !== human || human.cells.indexOf(c) < 0 || (big && big.mass > c.mass * 1.25)) c = human.aimCell = big;
+  return c;
+}
+function updateAim() {
+  const c = aimCell();
+  if (!c) return;
+  let dx, dy;
+  if (inputMode === 'touch') { dx = human.lastDx || 0; dy = human.lastDy || 0; }
+  else { dx = human.tx - c.x; dy = human.ty - c.y; if (dx * dx + dy * dy < Math.pow(Math.max(12, c.r * 0.4), 2)) dx = dy = 0; }
+  if (!dx && !dy) return;
+  const want = Math.atan2(dy, dx);
+  if (human.aimA !== human.aimA) { human.aimA = want; return; }    // primera vez (NaN)
+  let d = want - human.aimA;
+  if (d > Math.PI) d -= TAU; else if (d < -Math.PI) d += TAU;
+  human.aimA += d * 0.35;                                           // suave, sin saltos
+  if (human.aimA > Math.PI) human.aimA -= TAU; else if (human.aimA < -Math.PI) human.aimA += TAU;
 }
 
 function moveCells(p, dt) {
@@ -3053,9 +3080,6 @@ function render() {
     } else drawCell(o, s);
   }
 
-  // flecha de puntería: sale de tu célula mayor y apunta hacia donde miras (ahí va lo que lances)
-  if (human.alive && human.cells.length && (state === 'playing' || state === 'paused')) drawAimArrow(s);
-
   // partículas
   for (const p of particles) {
     const k = p.life / p.max;
@@ -3093,6 +3117,9 @@ function render() {
     ctx.globalAlpha = 1;
   }
 
+  // flecha de puntería (encima de todo): sale de tu célula mayor y apunta hacia donde miras
+  if (human.alive && human.cells.length && (state === 'playing' || state === 'paused')) drawAimArrow(s);
+
   // viñeta del tema
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = vigGrad;
@@ -3100,15 +3127,11 @@ function render() {
 }
 
 function drawAimArrow(s) {
-  const c = biggest(human);
+  const c = aimCell();
   if (!c) return;
-  let dx, dy;
-  if (inputMode === 'touch') { dx = human.lastDx || 0; dy = human.lastDy || 0; if (!dx && !dy) dx = 1; }
-  else { dx = human.tx - c.x; dy = human.ty - c.y; }
-  const d = Math.hypot(dx, dy);
-  if (d < 1) return;
-  const ux = dx / d, uy = dy / d, r = c.dr;
-  const L = Math.max(30 / s, r * 0.36), W = L * 0.85, gap = Math.max(10 / s, r * 0.1) + Math.sin(now * 5) * L * 0.08;
+  const a = human.aimA === human.aimA ? human.aimA : 0;
+  const ux = Math.cos(a), uy = Math.sin(a), r = c.dr;
+  const L = Math.max(30 / s, r * 0.36), W = L * 0.85, gap = Math.max(10 / s, r * 0.1);   // quieta: sin vaivén
   const bx = c.x + ux * (r + gap), by = c.y + uy * (r + gap);   // base de la flecha, junto al borde
   const tx = bx + ux * L, ty = by + uy * L, px = -uy, py = ux;
   ctx.save();
@@ -3327,7 +3350,7 @@ function startGame(keepWorld) {
   } else human.setSkin(SKINS[settings.skin]);
   // ningún bot lleva un color parecido al tuyo
   for (const b of players) if (b.isBot && b.alive && skinDist(b.skin, human.skin) < 24) b.setSkin(uniqueSkin(b));
-  human.lastDx = 1; human.lastDy = 0;
+  human.lastDx = 1; human.lastDy = 0; human.aimA = NaN;
   if (human.alive) { human.cells.length = 0; human.alive = false; }
   resetStats();
   spawnPlayer(human);
