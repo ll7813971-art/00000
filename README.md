@@ -96,6 +96,10 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   rejilla en vez de recorrerlas todas, los números se formatean sin `toLocaleString` y, si el dispositivo va
   lento, la simulación pasa a pasos de 1/30 s y no acumula más de 4 pasos por fotograma (luego baja la
   resolución). En un móvil simulado 4 veces más lento, Ultra pasa de ~20 a ~43 FPS.
+- **Lanzar con la flecha:** lo que lanzas sale siempre exactamente hacia donde apunta la flecha (también
+  moviéndote o con el rayo), desde la pieza de la que sale la flecha y sin sumarle la velocidad de la célula.
+- **Bots divididos como un solo jugador:** las piezas de un bot dividido van todas juntas hacia el mismo
+  objetivo, como las tuyas; ya no persigue cada pieza a su propia presa.
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
