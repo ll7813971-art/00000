@@ -740,6 +740,7 @@ const EAT_RATIO = 1.25;      // hay que ser 25% más grande para comer
 const MAX_CELL_MASS = 22500;
 const BOOST_K = 5;           // amortiguación del impulso al dividirse
 const SPAWN_SHIELD = 3;      // segundos de protección al aparecer
+const SOFT_R = 120;          // radio a partir del cual las células chocan con las de tamaño parecido (en vez de atravesarse)
 
 const radiusOf = m => Math.sqrt(m) * 10;
 const speedOf = m => 520 * Math.pow(m, -0.22);
@@ -1721,12 +1722,15 @@ function moveCells(p, dt) {
       for (let j = i + 1; j < n; j++) {
         const b = cells[j];
         if (now >= a.mergeAt && now >= b.mergeAt) continue;
-        if (now - a.born < 0.22 || now - b.born < 0.22) continue;
+        // La salida de una división va libre un instante y después el empuje entra poco a poco: con
+        // células enormes un empuje brusco se veía como un tirón.
+        const age = Math.min(now - a.born, now - b.born);
+        if (age < 0.08) continue;
         let dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy);
         const rs = a.r + b.r;
         if (d >= rs) continue;
         if (d < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = Math.hypot(dx, dy); }
-        const ov = (rs - d) * k, nx = dx / d, ny = dy / d, tot = a.mass + b.mass;
+        const ov = Math.min((rs - d) * k * clamp((age - 0.08) / 0.4, 0, 1), 1100 * dt), nx = dx / d, ny = dy / d, tot = a.mass + b.mass;
         const wa = b.mass / tot, wb = a.mass / tot;
         a.x -= nx * ov * wa; a.y -= ny * ov * wa;
         b.x += nx * ov * wb; b.y += ny * ov * wb;
@@ -1782,7 +1786,7 @@ function eatPellets(c) {
   return eatenBuf.length;
 }
 
-function collide() {
+function collide(dt) {
   const buf = qBufC;
   for (let i = 0; i < allCells.length; i++) {
     const a = allCells[i];
@@ -1802,8 +1806,8 @@ function collide() {
       if (dx * dx + dy * dy < a.r * a.r) { e.dead = true; a.mass += e.m; a.r = radiusOf(a.mass); }
     }
 
-    // otras células
-    cellGrid.query(a.x, a.y, a.r, buf);
+    // otras células (las grandes miran más lejos: también chocan con células de tamaño parecido)
+    cellGrid.query(a.x, a.y, a.r >= SOFT_R ? a.r * 1.95 : a.r, buf);
     for (let j = 0; j < buf.length; j++) {
       const b = buf[j];
       if (b === a || b.dead || b.mass > a.mass) continue;
@@ -1812,8 +1816,20 @@ function collide() {
         if (now >= a.mergeAt && now >= b.mergeAt && d < a.r - b.r * 0.3) {
           a.mass += b.mass; a.r = radiusOf(a.mass); b.dead = true;
         }
-      } else if (a.mass >= b.mass * EAT_RATIO && d < a.r - b.r * 0.4 && b.owner.protectUntil <= now) {
-        eatCell(a, b);
+      } else if (a.mass >= b.mass * EAT_RATIO && b.owner.protectUntil <= now) {
+        if (d < a.r - b.r * 0.4) eatCell(a, b);
+      } else if (a.r >= SOFT_R) {
+        // No se pueden comer (tamaño parecido, o la otra tiene el escudo de aparición): chocan en vez de
+        // atravesarse como fantasmas. El empuje es suave y la célula más ligera se aparta más.
+        const ov = a.r + b.r - d;
+        if (ov > 0) {
+          let nx = dx, ny = dy, dd = d;
+          if (dd < 0.01) { nx = Math.random() - 0.5; ny = Math.random() - 0.5; dd = Math.hypot(nx, ny) || 1; }
+          nx /= dd; ny /= dd;
+          const mv = Math.min(ov * 0.4, 600 * dt), tot = a.mass + b.mass;
+          a.x = clamp(a.x - nx * mv * (b.mass / tot), 0, WORLD); a.y = clamp(a.y - ny * mv * (b.mass / tot), 0, WORLD);
+          b.x = clamp(b.x + nx * mv * (a.mass / tot), 0, WORLD); b.y = clamp(b.y + ny * mv * (a.mass / tot), 0, WORLD);
+        }
       }
     }
 
@@ -1870,7 +1886,7 @@ function update(dt) {
   cellGrid.clear(); for (const c of allCells) cellGrid.add(c);
   ejGrid.clear(); for (const e of ejected) ejGrid.add(e);
 
-  collide();
+  collide(dt);
 
   for (const p of players) if (p.cells.length) compact(p.cells);
   compact(ejected);
@@ -1878,7 +1894,7 @@ function update(dt) {
   rebuildCells();
 
   // decaimiento de masa, límite y suavizado de radio
-  const sm = Math.min(1, dt * 12);
+  const sm = Math.min(1, dt * 22);        // el radio dibujado sigue al real casi al instante (con gigantes, un desfase se ve como comer a distancia)
   // Freno suave contra el desbordamiento de masa: si las células cubren demasiada arena, o un jugador
   // se vuelve descomunal, la pérdida de masa aumenta. En partidas normales vale 1 (no se nota).
   let area = 0;
@@ -2124,7 +2140,10 @@ function render() {
   // células absorbidas (animación)
   for (const g of ghosts) {
     const k = clamp((now - g.t0) / 0.16, 0, 1);
-    const x = lerp(g.x, g.to.x, k * k), y = lerp(g.y, g.to.y, k * k), r = g.r * (1 - k * 0.85);
+    // se desliza hacia el centro del que se la come, pero como mucho un tercio de su radio (con un gigante,
+    // cruzar todo su cuerpo en una décima de segundo se veía como un latigazo)
+    const gdx = g.to.x - g.x, gdy = g.to.y - g.y, gd = Math.hypot(gdx, gdy) || 1, gf = Math.min(gd, (g.to.dr || g.to.r) * 0.33) / gd;
+    const x = g.x + gdx * gf * k * k, y = g.y + gdy * gf * k * k, r = g.r * (1 - k * 0.85);
     ctx.globalAlpha = 1 - k * 0.6;
     ctx.drawImage(g.sprite, x - r, y - r, r * 2, r * 2);
   }

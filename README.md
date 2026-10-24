@@ -65,9 +65,13 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Movimiento de los bots más suave:** giran con inercia en vez de cambiar de rumbo en seco (el giro medio
   baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
 - **Colisiones:** las células grandes ya no atraviesan los muros (antes podían quedar casi a medias fuera
-  de la arena); si crecen pegadas a un muro se desplazan hacia dentro con suavidad. Las piezas propias se
-  empujan entre sí sin hundirse unas en otras ni temblar, también contra un muro, y los virus y la masa
-  expulsada rebotan con su borde.
+  de la arena) y, si crecen pegadas a uno, se desplazan hacia dentro con suavidad. Las células de distinto
+  dueño que no pueden comerse entre sí (tamaño parecido, o con el escudo de aparición) **chocan y se apartan
+  suavemente** en vez de atravesarse como fantasmas: en partidas de 200 bots el solapamiento mediano entre
+  células grandes baja del 76 % al 1 %. Al dividirse un gigante o explotar con un virus, las piezas se
+  separan sin tirones (el mayor salto por fotograma baja de 153 px a 45 px), la célula comida se desliza
+  hacia el borde de quien se la come y las piezas propias se empujan entre sí sin hundirse ni temblar,
+  también contra un muro. Los virus y la masa expulsada rebotan con su borde.
 - Rendimiento: sprites pre-renderizados, rejilla espacial y resolución adaptativa.
 
 ## Archivos
