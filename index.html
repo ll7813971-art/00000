@@ -903,7 +903,7 @@ const Sound = {
       if (!AC) return;
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.55 * this.vol;
+      this.master.gain.value = 1.1 * this.vol;
       this.master.connect(this.ctx.destination);
     } catch (e) { this.ctx = null; }
   },
@@ -929,7 +929,7 @@ const Sound = {
   die() { this.tone(420, 55, 0.8, 'sawtooth', 0.1); this.tone(260, 40, 0.9, 'triangle', 0.08, 0.1); },
   click() { this.tone(620, 920, 0.05, 'sine', 0.04); },
   win() { [0, 0.1, 0.2, 0.32].forEach((d, i) => this.tone(520 * Math.pow(1.26, i), 560 * Math.pow(1.26, i), 0.16, 'triangle', 0.06, d)); },
-  setVolume(v) { this.vol = v; if (this.master) this.master.gain.value = 0.55 * v; },
+  setVolume(v) { this.vol = v; if (this.master) this.master.gain.value = 1.1 * v; },
   start() { [0, 0.09, 0.18].forEach((d, i) => this.tone(440 * (1 + i * 0.26), 880 * (1 + i * 0.26), 0.12, 'sine', 0.05, d)); }
 };
 
@@ -1149,7 +1149,7 @@ function spawnPlayer(p, mass) {
   p.protectUntil = now + SPAWN_SHIELD;
 }
 
-function initWorld(key) {
+function initWorld(key, fresh) {
   worldDiff = key;
   const D = DIFFS[key];
   WORLD = D.world; PELLETS = D.pellets; VIRUS_MIN = D.virusMin; VIRUS_MAX = D.virusMax;
@@ -1168,15 +1168,15 @@ function initWorld(key) {
   for (let i = 0; i < D.bots; i++) {
     const b = createBot(D);
     players.push(b);
-    spawnPlayer(b, START_MASS + Math.pow(Math.random(), 2.4) * D.spread);
+    spawnPlayer(b, fresh ? START_MASS : START_MASS + Math.pow(Math.random(), 2.4) * D.spread);   // partida nueva: todos parten de cero
   }
   spectate = null;
 }
 
 // Crea el mundo del modo elegido y lo pre-simula unos segundos para que el fondo ya esté vivo
-function buildWorld(key) {
-  initWorld(key);
-  for (let i = 0; i < DIFFS[key].presim; i++) update(STEP);
+function buildWorld(key, fresh) {
+  initWorld(key, fresh);
+  if (!fresh) for (let i = 0; i < DIFFS[key].presim; i++) update(STEP);
   spectate = leader();
   if (spectate) {
     const c = centroid(spectate);
@@ -2354,7 +2354,7 @@ function startGame() {
   Sound.init();
   settings.name = $('nick').value.trim().slice(0, 15);
   store.set('name', settings.name);
-  if (worldDiff !== settings.diff) buildWorld(settings.diff);
+  buildWorld(settings.diff, true);       // cada partida empieza de cero para todos (bots incluidos)
   human.name = settings.name || 'Jugador';
   human.nameSprite = null;
   // Color aleatorio: la partida usa el color que se ve en la vista previa y se prepara otro para la siguiente

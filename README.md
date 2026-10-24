@@ -64,6 +64,7 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   menú (volver a pulsarla cambia de color); cada partida nueva sale con un color distinto.
 - **Movimiento de los bots más suave:** giran con inercia en vez de cambiar de rumbo en seco (el giro medio
   baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
+- **Partida nueva:** cada partida empieza de cero para todos: los bots arrancan con la masa inicial, igual que tú.
 - **Comer:** una célula que puede comerte (≥25 % más masa) lo hace cuando te tapa aproximadamente la mitad
   de tu superficie, como en el Agar.io original. Antes podía taparte entre el 65 % y el 74 % sin comerte.
   Lo mismo vale para explotar al pasar sobre un virus.
