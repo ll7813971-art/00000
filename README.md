@@ -66,6 +66,7 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
 - **Partida nueva:** al pulsar Jugar desde el menú todos empiezan de cero (bots incluidos). Si mueres y pulsas «Jugar de nuevo», la partida no se reinicia: los bots conservan su progreso y tú reapareces con la masa inicial.
 - **Unión automática:** las piezas de una célula dividida (de jugador y de bots) se juntan solas, con suavidad, a los 30 s. En el panel de la izquierda aparece la cuenta atrás «Unión en 0:xx».
+- **Teclado del móvil:** al escribir el apodo, el teclado no encoge ni deforma el juego (el lienzo conserva su tamaño y el teclado se cierra al empezar).
 - **Comer:** una célula que puede comerte (≥25 % más masa) lo hace cuando te tapa aproximadamente la mitad
   de tu superficie, como en el Agar.io original. Antes podía taparte entre el 65 % y el 74 % sin comerte.
   Lo mismo vale para explotar al pasar sobre un virus.

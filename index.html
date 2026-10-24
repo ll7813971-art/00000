@@ -2,7 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
 <meta name="theme-color" content="#000000" />
 <meta name="color-scheme" content="dark light" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -1989,7 +1989,10 @@ let userZoom = 1;
 let spectate = null, spectatePick = 0;
 const drawList = [];
 
+// Teclado del móvil: al escribir el apodo la ventana se acorta, pero el juego no debe reescalarse ni deformarse
+const isTyping = () => { const a = document.activeElement; return !!a && a.matches && a.matches('input[type=text],input:not([type]),textarea'); };
 function resize() {
+  if (document.body.classList.contains('touch') && isTyping() && window.innerWidth === vw && window.innerHeight < vh) return;
   vw = window.innerWidth; vh = window.innerHeight;
   canvas.width = Math.round(vw * dpr);
   canvas.height = Math.round(vh * dpr);
@@ -2377,6 +2380,7 @@ function resetStats() {
 
 function startGame(keepWorld) {
   Sound.init();
+  if (isTyping()) document.activeElement.blur();   // cierra el teclado del móvil
   settings.name = $('nick').value.trim().slice(0, 15);
   store.set('name', settings.name);
   // Desde el menú la partida empieza de cero para todos (bots incluidos). Si has muerto y vuelves a jugar,
@@ -2602,6 +2606,17 @@ window.addEventListener('keyup', e => { if (e.key === 'w' || e.key === 'W') inpu
 window.addEventListener('blur', () => { input.eject = false; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
 window.addEventListener('resize', resize);
+document.addEventListener('focusin', e => {
+  if (!document.body.classList.contains('touch') || !isTyping()) return;
+  canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';   // el lienzo conserva su tamaño bajo el teclado
+});
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    if (isTyping()) return;
+    canvas.style.width = ''; canvas.style.height = '';
+    resize();
+  }, 250);
+});
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 /* =====================================================================
