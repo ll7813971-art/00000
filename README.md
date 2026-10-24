@@ -59,9 +59,12 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - Sonido sintetizado con WebAudio y vibración en móvil.
 - Equilibrio a largo plazo: la pérdida de masa aumenta si la arena se satura o un jugador se vuelve
   descomunal, para que las partidas largas (sobre todo en Ultra) no acaben con células cubriéndolo todo.
-- **Colores:** los bots tienen colores aleatorios (tono, saturación y luminosidad al azar) y estrenan
-  un color nuevo cada vez que reaparecen. El jugador puede elegir la categoría **Color aleatorio** en el
-  menú (volver a pulsarla cambia de color); cada partida nueva sale con un color distinto.
+- **Colores sin repetir:** cada bot (y el jugador con **Color aleatorio**) recibe un color al azar, pero de
+  64 colores candidatos se queda con el más distinto de todos los que ya hay en la arena, y estrena otro
+  al reaparecer. Ningún bot lleva un color parecido al del jugador. Antes, con colores puramente al azar,
+  en Ultra había ~220 parejas casi idénticas; ahora ninguna (también en partidas normales).
+- **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
+  reaparecer.
 - **Movimiento de los bots más suave:** giran con inercia en vez de cambiar de rumbo en seco (el giro medio
   baja un 34 % y los giros bruscos se reducen a la mitad, sin perder rendimiento en combate).
 - **Partida nueva:** al pulsar Jugar desde el menú todos empiezan de cero (bots incluidos). Si mueres y pulsas «Jugar de nuevo», la partida no se reinicia: los bots conservan su progreso y tú reapareces con la masa inicial.

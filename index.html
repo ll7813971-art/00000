@@ -834,8 +834,8 @@ const SKINS = [
 ];
 // Color aleatorio: tono, saturación y luminosidad al azar, y un segundo tono distinto para el degradado
 function randomSkin() {
-  const h1 = Math.random() * 360;
-  return { name: 'Aleatorio', h1, h2: (h1 + rand(35, 150)) % 360, s1: rand(78, 100), l1: rand(54, 68), s2: rand(70, 96), l2: rand(40, 54) };
+  const h1 = Math.random() * 360, side = Math.random() < 0.5 ? 1 : -1;
+  return { name: 'Aleatorio', h1, h2: (h1 + side * rand(35, 150) + 360) % 360, s1: rand(76, 100), l1: rand(50, 70), s2: rand(68, 96), l2: rand(36, 56) };
 }
 const RAINBOW = ['#ff4d6d', '#ffb703', '#80ed99', '#4cc9f0', '#7b2ff7', '#f72585'];
 
@@ -860,11 +860,6 @@ const THEMES = {
   }
 };
 
-const BOT_NAMES = ['Nova', 'Pixel', 'Sombra', 'Zeus', 'Luna', 'Titán', 'Blaze', 'Kraken', 'Neón', 'Vórtice', 'Atlas', 'Fénix',
-  'Rayo', 'Cosmo', 'Ninja', 'Víbora', 'Orión', 'Draco', 'Mango', 'Tóxico', 'Bolt', 'Eco', 'Gizmo', 'Sultán', 'Lobo', 'Tiburón',
-  'Glitch', 'Nébula', 'Jade', 'Rubí', 'Ónix', 'Boom', 'Frost', 'Chispa', 'Magma', 'Púlsar', 'Quásar', 'Turbo', 'Yeti', 'Zorro',
-  'Rex', 'Kiwi', 'Panda', 'Hydra', 'Ares', 'Hermes', 'Saturno', 'Venus', 'Marte', 'Cometa', 'Átomo', 'Bicho', 'Sushi', 'Tornado',
-  'Coco', 'Mamba', 'Alfa', 'Omega', 'Dino', 'Pulpo'];
 
 /* =====================================================================
    SPRITES PRE-RENDERIZADOS (rendimiento en móvil)
@@ -1103,8 +1098,6 @@ const SMART = { predict: true, danger: false, guard: true, forage: false, split:
 const botDanger = [];
 let worldDiff = null;
 let nextVirusAt = 0;
-let namePool = [];
-let nameRound = 0;
 
 const human = new Player('Jugador', SKINS[0], false);
 const stats = { start: 0, food: 0, cells: 0, kills: 0, maxMass: 0, bestRank: 99, killer: '' };
@@ -1166,14 +1159,29 @@ function spawnVirus(x, y, vx, vy) {
 }
 
 /* ---------- Jugadores ---------- */
-function pickName() {
-  if (!namePool.length) { namePool = BOT_NAMES.slice().sort(() => Math.random() - 0.5); nameRound++; }
-  const n = namePool.pop();
-  return nameRound > 1 ? n + nameRound : n;      // con 200 bots los nombres se repiten: Nova, Nova2…
+// Colores sin repetir: de varios colores al azar se queda con el más distinto de todos los que ya hay en la arena
+function skinDist(a, b) {
+  if (a.rainbow || b.rainbow) return a.rainbow && b.rainbow ? 0 : 999;
+  const dh = (x, y) => { const d = Math.abs(x - y) % 360; return d > 180 ? 360 - d : d; };
+  return Math.hypot(dh(a.h1, b.h1), dh(a.h2, b.h2) * 0.6, ((a.l1 || 64) - (b.l1 || 64)) * 2.5);
+}
+function uniqueSkin(self) {
+  const taken = [];
+  for (const p of players) if (p !== self && p.skin && (p.alive || p === human)) taken.push(p.skin);
+  if (settings.randomColor && settings.rolled && self !== human) taken.push(settings.rolled);
+  let best = null, bestD = -1;
+  for (let k = 0; k < 64; k++) {
+    const sk = randomSkin();
+    let near = Infinity;
+    for (const t of taken) { const d = skinDist(sk, t); if (d < near) near = d; }
+    if (near > bestD) { bestD = near; best = sk; }
+    if (near > 80) break;
+  }
+  return best;
 }
 
-function createBot(D) {
-  const b = new Player(pickName(), randomSkin(), true);
+function createBot(D, num) {
+  const b = new Player('#' + num, uniqueSkin(null), true);   // los bots se llaman por su número: #1, #2…
   b.skill = rand(D.skill[0], D.skill[1]);
   b.aggr = rand(D.iq >= 2 ? 0.9 : 0.55, D.iq >= 2 ? 1.5 : 1.35) * (0.6 + 0.4 * b.skill);
   b.caution = rand(0.85, 1.25);
@@ -1220,17 +1228,15 @@ function initWorld(key, fresh) {
   PGN = Math.ceil(WORLD / PG);
   cellGrid = new Grid(300); ejGrid = new Grid(300);
   botSpriteSize = D.bots > 100 ? 144 : 192;
-  nameRound = 0;
   players.length = 0; allCells.length = 0;
   ejected.length = 0; viruses.length = 0;
   particles.length = 0; ghosts.length = 0; floats.length = 0;
-  namePool = [];
   initPellets();
   for (let i = 0; i < VIRUS_MIN; i++) spawnVirus();
   human.alive = false; human.cells.length = 0;
   players.push(human);
   for (let i = 0; i < D.bots; i++) {
-    const b = createBot(D);
+    const b = createBot(D, i + 1);
     players.push(b);
     spawnPlayer(b, fresh ? START_MASS : START_MASS + Math.pow(Math.random(), 2.4) * D.spread);   // partida nueva: todos parten de cero
   }
@@ -1942,7 +1948,7 @@ function update(dt) {
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     if (!p.alive) {
-      if (p.isBot && now >= p.respawnAt) { p.setSkin(randomSkin()); spawnPlayer(p, START_MASS + rand(0, 14)); }   // nueva vida, nuevo color
+      if (p.isBot && now >= p.respawnAt) { p.setSkin(uniqueSkin(p)); spawnPlayer(p, START_MASS + rand(0, 14)); }   // nueva vida, nuevo color
       continue;
     }
     if (p.isBot) {
@@ -2471,10 +2477,13 @@ function startGame(keepWorld) {
   human.nameSprite = null;
   // Color aleatorio: la partida usa el color que se ve en la vista previa y se prepara otro para la siguiente
   if (settings.randomColor) {
-    human.setSkin(settings.rolled || randomSkin());
-    settings.rolled = randomSkin();
+    human.setSkin(settings.rolled || uniqueSkin(human));
+    settings.rolled = null;
+    settings.rolled = uniqueSkin(human);
     drawAvatar();
   } else human.setSkin(SKINS[settings.skin]);
+  // ningún bot lleva un color parecido al tuyo
+  for (const b of players) if (b.isBot && b.alive && skinDist(b.skin, human.skin) < 24) b.setSkin(uniqueSkin(b));
   human.lastDx = 1; human.lastDy = 0;
   if (human.alive) { human.cells.length = 0; human.alive = false; }
   resetStats();
@@ -2745,7 +2754,7 @@ function skinCss(sk) {
 function drawAvatar() {
   const cv = $('avatar'), g = cv.getContext('2d');
   g.clearRect(0, 0, cv.width, cv.height);
-  const sk = settings.randomColor ? (settings.rolled || (settings.rolled = randomSkin())) : SKINS[settings.skin];
+  const sk = settings.randomColor ? (settings.rolled || (settings.rolled = uniqueSkin(human))) : SKINS[settings.skin];
   g.drawImage(makeCellSprite(sk, 224), 0, 0, cv.width, cv.height);
 }
 
@@ -3099,7 +3108,7 @@ function buildUI() {
   for (const b of $('colorMode').children) {
     b.addEventListener('click', () => {
       const random = b.dataset.v === 'random';
-      if (random) settings.rolled = randomSkin();            // al elegirlo (o volver a pulsarlo) sale un color nuevo
+      if (random) settings.rolled = uniqueSkin(human);            // al elegirlo (o volver a pulsarlo) sale un color nuevo
       settings.randomColor = random; store.set('randomColor', random);
       syncUI(); drawAvatar(); Sound.init(); Sound.click();
     });
