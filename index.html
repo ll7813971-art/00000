@@ -2350,11 +2350,13 @@ function resetStats() {
   stats.maxMass = START_MASS; stats.bestRank = 99; stats.killer = ''; stats.alive = 0;
 }
 
-function startGame() {
+function startGame(keepWorld) {
   Sound.init();
   settings.name = $('nick').value.trim().slice(0, 15);
   store.set('name', settings.name);
-  buildWorld(settings.diff, true);       // cada partida empieza de cero para todos (bots incluidos)
+  // Desde el menú la partida empieza de cero para todos (bots incluidos). Si has muerto y vuelves a jugar,
+  // la partida sigue: los bots conservan su progreso y tú reapareces con la masa inicial.
+  if (!(keepWorld && worldDiff === settings.diff && !human.alive)) buildWorld(settings.diff, true);
   human.name = settings.name || 'Jugador';
   human.nameSprite = null;
   // Color aleatorio: la partida usa el color que se ve en la vista previa y se prepara otro para la siguiente
@@ -2561,7 +2563,7 @@ window.addEventListener('keydown', e => {
   } else if (k === 'Escape' || k === 'p' || k === 'P') {
     if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame();
   } else if (k === 'Enter') {
-    if (state === 'menu' || state === 'dead') startGame();
+    if (state === 'menu') startGame(); else if (state === 'dead') startGame(true);
   } else if (k === 'm' || k === 'M') {
     setSetting('sound', !settings.sound);
   } else if (k === 't' || k === 'T') {
@@ -2719,8 +2721,8 @@ function buildUI() {
   document.addEventListener('fullscreenchange', () => setTimeout(resize, 100));
   document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 100));
 
-  $('playBtn').addEventListener('click', startGame);
-  $('againBtn').addEventListener('click', startGame);
+  $('playBtn').addEventListener('click', () => startGame());
+  $('againBtn').addEventListener('click', () => startGame(true));
   $('toMenuBtn').addEventListener('click', () => { Sound.click(); toMenu(); });
   $('resumeBtn').addEventListener('click', () => { Sound.click(); resumeGame(); });
   $('quitBtn').addEventListener('click', () => { Sound.click(); toMenu(); });
