@@ -67,6 +67,12 @@
   --kbd-bg:rgba(255,255,255,.10);
   --ring-in:#0b0b12;
   --focus:#a78bfa;
+  --osk-bg:rgba(16,16,24,.94);
+  --osk-key:rgba(255,255,255,.13);
+  --osk-fn:rgba(255,255,255,.06);
+  --osk-down:rgba(255,255,255,.30);
+  --osk-sh:rgba(0,0,0,.55);
+  --osk-pop:#2b2b3d;
 }
 /* ---------- Tema BLANCO ---------- */
 :root[data-theme="light"]{
@@ -93,6 +99,12 @@
   --kbd-bg:rgba(15,18,45,.07);
   --ring-in:#fff;
   --focus:#6d28d9;
+  --osk-bg:rgba(222,225,235,.97);
+  --osk-key:#ffffff;
+  --osk-fn:rgba(15,18,45,.11);
+  --osk-down:rgba(15,18,45,.18);
+  --osk-sh:rgba(15,18,45,.28);
+  --osk-pop:#ffffff;
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -155,6 +167,45 @@ svg{display:block}
 }
 .field input::placeholder{color:var(--muted);opacity:.75}
 .field input:focus{border-color:transparent;background:var(--fill-2);box-shadow:0 0 0 2px var(--g2),0 0 24px rgba(139,92,246,.28)}
+.field .nick-caret{position:absolute;top:50%;left:46px;width:2px;height:22px;margin-top:-11px;border-radius:2px;background:var(--focus);display:none;pointer-events:none;animation:blink 1.05s steps(1) infinite}
+.field.editing .nick-caret{display:block}
+.field.editing input{border-color:transparent;background:var(--fill-2);box-shadow:0 0 0 2px var(--g2),0 0 24px rgba(139,92,246,.28)}
+@keyframes blink{50%{opacity:0}}
+/* ---------- Teclado propio ---------- */
+#osk{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:4px calc(4px + var(--sr)) calc(6px + var(--sb)) calc(4px + var(--sl));
+  background:var(--osk-bg);border-top:1px solid var(--stroke-2);box-shadow:0 -12px 34px rgba(0,0,0,.28);
+  -webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);
+  transform:translateY(110%);visibility:hidden;transition:transform .24s var(--ease),visibility .24s;touch-action:none;-webkit-user-select:none;user-select:none;font-family:var(--font)}
+#osk.show{transform:none;visibility:visible}
+.osk-in{max-width:780px;margin:0 auto}
+.osk-strip{display:flex;align-items:center;gap:10px;height:36px;padding:0 4px 0 10px}
+.osk-text{flex:1;min-width:0;font-size:17px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.osk-text .ph{color:var(--muted);font-weight:600}
+.osk-text i{display:inline-block;width:2px;height:1.1em;margin-left:1px;vertical-align:-.18em;border-radius:2px;background:var(--focus);animation:blink 1.05s steps(1) infinite}
+#oskCount{font-size:12px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+#oskCount.full{color:#f97316}
+.osk-hide{width:42px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--text);background:var(--fill-1);border:1px solid var(--stroke)}
+.osk-row{display:flex;gap:var(--kg,6px);margin-top:var(--kg,6px)}
+.osk-row.r2{padding:0 0}
+.k{flex:1 1 0;min-width:0;height:var(--kh,46px);border-radius:9px;display:flex;align-items:center;justify-content:center;position:relative;
+  font-size:calc(var(--kh,46px) * .46);font-weight:600;color:var(--text);background:var(--osk-key);box-shadow:0 1.5px 0 var(--osk-sh);line-height:1}
+.k.w15{flex-grow:1.5}.k.w4{flex-grow:4.2}
+.k.fn{background:var(--osk-fn);font-size:calc(var(--kh,46px) * .32);font-weight:800;letter-spacing:.02em}
+.k svg{width:calc(var(--kh,46px) * .5);height:calc(var(--kh,46px) * .5);flex:none}
+.k *{pointer-events:none}
+.k.go{background:var(--grad-main);color:#fff;box-shadow:0 2px 10px rgba(139,92,246,.35)}
+.k.space{font-size:calc(var(--kh,46px) * .27);font-weight:700;color:var(--muted)}
+.k.down{background:var(--osk-down)}
+.k.go.down{filter:brightness(1.18)}
+.k.on{color:var(--g1)}
+.k.lock{color:var(--g1);box-shadow:inset 0 -3px 0 var(--g1),0 1.5px 0 var(--osk-sh)}
+.k sup{position:absolute;top:2px;right:4px;font-size:calc(var(--kh,46px) * .2);font-weight:700;color:var(--muted)}
+.k.emo{font-size:calc(var(--kh,46px) * .5)}
+.osk-pop{position:fixed;z-index:61;display:none;align-items:flex-start;justify-content:center;padding-top:6px;border-radius:12px 12px 10px 10px;pointer-events:none;
+  background:var(--osk-pop);color:var(--text);font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.35);border:1px solid var(--stroke-2)}
+.osk-alt{position:fixed;z-index:62;display:none;gap:4px;padding:5px;border-radius:14px;pointer-events:none;background:var(--osk-pop);box-shadow:0 10px 30px rgba(0,0,0,.4);border:1px solid var(--stroke-2)}
+.osk-alt span{min-width:38px;height:calc(var(--kh,46px) * 1.02);padding:0 4px;display:grid;place-items:center;border-radius:9px;font-size:calc(var(--kh,46px) * .5);font-weight:600;color:var(--text)}
+.osk-alt span.sel{background:var(--grad-main);color:#fff}
 .label{font-size:11.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
 .label em{font-style:normal;letter-spacing:.04em;text-transform:none;font-weight:700;color:var(--accent-text)}
 .skins{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 8px;justify-items:center}
@@ -507,6 +558,7 @@ body.touch .only-pc{display:none}
         <label class="field">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
           <input id="nick" type="text" maxlength="15" placeholder="Tu apodo" aria-label="Tu apodo" inputmode="text" autocomplete="nickname" autocapitalize="words" enterkeyhint="done" />
+          <i class="nick-caret" id="nickCaret" aria-hidden="true"></i>
         </label>
       </div>
       <div class="label lbl-skin">Skin <em id="skinName">Aurora</em></div>
@@ -692,6 +744,15 @@ body.touch .only-pc{display:none}
   </div>
 </div>
 
+<div id="osk" aria-hidden="true">
+  <div class="osk-in">
+    <div class="osk-strip"><span class="osk-text" id="oskText"></span><span id="oskCount">0/15</span>
+      <button class="osk-hide" data-k="hide" aria-label="Ocultar teclado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div id="oskRows"></div>
+  </div>
+</div>
+<div id="oskPop" class="osk-pop"></div>
+<div id="oskAlt" class="osk-alt"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <!-- ============ CARGA ============ -->
@@ -2414,7 +2475,8 @@ function resetStats() {
 function startGame(keepWorld) {
   Sound.init();
   if (isTyping()) document.activeElement.blur();   // cierra el teclado del móvil
-  settings.name = $('nick').value.trim().slice(0, 15);
+  OSK.close();
+  settings.name = Array.from($('nick').value.trim()).slice(0, 15).join('').trim();
   store.set('name', settings.name);
   // Desde el menú la partida empieza de cero para todos (bots incluidos). Si has muerto y vuelves a jugar,
   // la partida sigue: los bots conservan su progreso y tú reapareces con la masa inicial.
@@ -2535,6 +2597,7 @@ function setInputMode(m) {
   if (inputMode === m) return;
   inputMode = m;
   document.body.classList.toggle('touch', m === 'touch');
+  OSK.sync();
   resize();
 }
 try { if (window.matchMedia('(pointer: coarse)').matches) { inputMode = 'touch'; document.body.classList.add('touch'); } } catch (e) { /* sin matchMedia */ }
@@ -2608,6 +2671,7 @@ bindHold($('btnEject'), () => { if (state === 'playing') input.eject = true; }, 
 $('pauseBtn').addEventListener('click', () => { Sound.click(); pauseGame(); });
 
 window.addEventListener('keydown', e => {
+  if (OSK.shown) { OSK.physical(e); return; }
   const k = e.key;
   if (k === 'Escape' && settingsOpen) { closeSettings(); return; }
   const tag = e.target && e.target.tagName;
@@ -2682,38 +2746,6 @@ if (VK) VK.addEventListener('geometrychange', () => {
 });
 if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (kbBase) requestAnimationFrame(keepFieldVisible); });
 
-// En pantalla completa los móviles (Chrome, app de Google) no saben mostrar bien el teclado: la pantalla se queda
-// en negro. Así que al tocar el campo del apodo se sale antes de pantalla completa, se escribe con normalidad y,
-// al terminar, el siguiente toque (o «Jugar») vuelve a ponerla.
-let fsResume = false;
-const inFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
-function exitFs() {
-  try { const d = document, r = (d.exitFullscreen || d.webkitExitFullscreen).call(d); return r && r.then ? r.catch(() => {}) : Promise.resolve(); }
-  catch (e) { return Promise.resolve(); }
-}
-function enterFs() {
-  try { const de = document.documentElement, r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de); if (r && r.catch) r.catch(() => {}); }
-  catch (e) { /* no soportado */ }
-}
-function typeOutsideFs(e) {
-  if (!document.body.classList.contains('touch') || !inFs()) return;
-  e.preventDefault();                      // todavía no: primero se sale de pantalla completa
-  fsResume = true;
-  const f = e.currentTarget;
-  exitFs().then(() => setTimeout(() => { resize(); try { f.focus({ preventScroll: true }); } catch (x) { f.focus(); } }, 350));
-}
-for (const f of document.querySelectorAll('input[type=text]')) {
-  f.addEventListener('touchstart', typeOutsideFs, { passive: false });
-  f.addEventListener('mousedown', typeOutsideFs);
-  f.addEventListener('focus', () => { if (document.body.classList.contains('touch') && inFs()) { fsResume = true; exitFs(); } });
-}
-document.addEventListener('pointerup', e => {
-  if (!fsResume || isTyping() || e.pointerType === 'mouse') return;
-  const t = e.target;
-  if (t && t.closest && (t.closest('input[type=text]') || t.closest('[data-act="fs"]'))) { if (t.closest('[data-act="fs"]')) fsResume = false; return; }
-  fsResume = false;
-  if (!inFs()) enterFs();
-}, true);
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 /* =====================================================================
@@ -2763,6 +2795,279 @@ function applyQuality() {
 }
 
 let settingsOpen = false, settingsOpener = null;
+/* =====================================================================
+   TECLADO PROPIO (móvil y tableta): QWERTY español con Ñ, acentos al mantener pulsado,
+   mayúsculas (doble toque = bloqueo), números, símbolos y emojis. El teclado del móvil no se abre nunca,
+   así que el juego no se encoge ni se queda en negro (tampoco en pantalla completa).
+   ===================================================================== */
+const OSK = (() => {
+  const root = $('osk'), rowsEl = $('oskRows'), pop = $('oskPop'), altEl = $('oskAlt');
+  const textEl = $('oskText'), countEl = $('oskCount');
+  const MAX = 15;
+  const ALT = { a: 'áàäâã', e: 'éèëê', i: 'íìïî', o: 'óòöôõ', u: 'úùüû', n: 'ñ', c: 'ç', y: 'ý', s: 'ß',
+    '?': '¿', '!': '¡', '.': '…·', ',': ';:', '-': '_—', '$': '€£¥¢', '0': '°', '"': '«»', "'": '`´' };
+  const DIGIT = { q: '1', w: '2', e: '3', r: '4', t: '5', y: '6', u: '7', i: '8', o: '9', p: '0' };
+  const PAGES = {
+    abc: ['q w e r t y u i o p', 'a s d f g h j k l ñ', '⇧ z x c v b n m ⌫', '?123 😊 , ␣ . ✓'],
+    sym: ['1 2 3 4 5 6 7 8 9 0', '@ # € _ & - + ( ) /', '=\\< * " \' : ; ! ? ⌫', 'ABC 😊 , ␣ . ✓'],
+    sym2: ['~ ` | • √ π ÷ × ¶ ∆', '£ ¥ $ ¢ ^ ° = { } %', '?123 \\ © ® ™ ¡ ¿ [ ] ⌫', 'ABC 😊 < ␣ > ✓'],
+    emo: ['😀 😂 😍 😎 🤩 😈 👻 💀 🤖 👽', '🔥 ⚡ ⭐ 💎 👑 🎮 🏆 💥 🌙 💜', '🍕 🐱 🐶 🦊 🐼 🦁 🐸 🐙 ⌫', 'ABC , ␣ . ✓']
+  };
+  const FN = { '⇧': 'w15 fn', '⌫': 'w15 fn', '?123': 'w15 fn', 'ABC': 'w15 fn', '=\\<': 'w15 fn', '😊': 'fn', '␣': 'w4 space', '✓': 'w15 go' };
+  const ICON = {
+    '⇧': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 4l8 8h-4.5v7h-7v-7H4z"/></svg>',
+    '⌫': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>',
+    '✓': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+  };
+  let target = null, page = 'abc', shift = 0, lastShift = 0, shown = false;
+  const act = new Map();   // un estado por dedo (se puede escribir con los dos pulgares)
+  const chars = v => Array.from(v);
+  const isChar = t => !(t in FN) && t !== 'hide';
+  const label = t => (page === 'abc' && shift && t.length === 1) ? t.toUpperCase() : t;
+
+  function render() {
+    rowsEl.innerHTML = '';
+    PAGES[page].forEach((row, ri) => {
+      const r = document.createElement('div');
+      r.className = 'osk-row r' + (ri + 1);
+      for (const t of row.split(' ')) {
+        const k = document.createElement('div');
+        k.className = 'k ' + (FN[t] || '') + (page === 'emo' && isChar(t) && !/^[,.]$/.test(t) ? ' emo' : '');
+        k.dataset.k = t;
+        if (ICON[t]) k.innerHTML = ICON[t];
+        else if (t === '␣') k.textContent = 'espacio';
+        else if (t === '=\\<') k.textContent = '=\\<';
+        else k.textContent = label(t);
+        if (page === 'abc' && DIGIT[t]) { const s = document.createElement('sup'); s.textContent = DIGIT[t]; k.appendChild(s); }
+        if (t === '⇧') k.classList.toggle(shift === 2 ? 'lock' : 'on', shift > 0);
+        r.appendChild(k);
+      }
+      rowsEl.appendChild(r);
+    });
+  }
+  function autoShift() {
+    if (shift === 2 || !target) return;
+    const v = target.value;
+    const want = v.length === 0 || / $/.test(v) ? 1 : 0;   // mayúscula al empezar cada palabra
+    if (want !== shift) { shift = want; if (page === 'abc') render(); }
+  }
+  function refresh() {
+    if (!target) return;
+    const v = target.value, n = chars(v).length;
+    textEl.textContent = '';
+    if (v) textEl.appendChild(document.createTextNode(v));
+    else { const ph = document.createElement('span'); ph.className = 'ph'; ph.textContent = target.placeholder || ''; textEl.appendChild(ph); }
+    textEl.appendChild(document.createElement('i'));
+    if (!v) textEl.insertBefore(textEl.lastChild, textEl.firstChild);
+    countEl.textContent = n + '/' + MAX;
+    countEl.classList.toggle('full', n >= MAX);
+    placeCaret();
+  }
+  const mc = document.createElement('canvas').getContext('2d');
+  function placeCaret() {
+    const car = $('nickCaret');
+    if (!car || !target) return;
+    const cs = getComputedStyle(target);
+    mc.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    const pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+    const w = target.value ? mc.measureText(target.value).width : 0;
+    target.scrollLeft = 1e4;
+    const x = Math.min(target.clientWidth - pr, pl + w - (target.scrollLeft || 0)) + 1;
+    car.style.left = (target.offsetLeft + x) + 'px';
+  }
+  function setVal(v) { target.value = v; target.dispatchEvent(new Event('input', { bubbles: true })); refresh(); }
+  function insert(ch) {
+    if (!target) return;
+    if (chars(target.value).length >= MAX) { vibrate([10, 40, 10]); countEl.animate && countEl.animate([{ transform: 'scale(1.35)' }, { transform: 'none' }], 220); return; }
+    setVal(target.value + ch);
+    if (shift === 1) { shift = 0; if (page === 'abc') render(); }
+    if (ch === ' ' && page !== 'abc' && page !== 'emo') { page = 'abc'; render(); }   // como en el móvil: tras un espacio vuelve a las letras
+    autoShift();
+  }
+  function backspace() {
+    if (!target) return;
+    const a = chars(target.value);
+    if (!a.length) return;
+    a.pop();
+    setVal(a.join(''));
+    autoShift();
+  }
+  function feedback() { vibrate(7); if (Sound.ctx) Sound.tone(1250, 950, 0.025, 'sine', 0.02); }
+  function keyAt(x, y) { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('#osk .k') : null; }
+  function showPop(k) {
+    const t = k.dataset.k;
+    if (!isChar(t) || page === 'emo') { pop.style.display = 'none'; return; }
+    const r = k.getBoundingClientRect(), w = r.width + 18, h = r.height * 1.25;
+    pop.textContent = label(t);
+    pop.style.cssText = `display:flex;left:${Math.max(2, Math.min(innerWidth - w - 2, r.left + r.width / 2 - w / 2))}px;top:${r.top - h - 4}px;width:${w}px;height:${h}px;font-size:${r.height * 0.62}px`;
+  }
+  function hidePop() { pop.style.display = 'none'; }
+  function down(st) {
+    const k = st.key, t = k.dataset.k;
+    k.classList.add('down');
+    feedback();
+    showPop(k);
+    clearTimeout(st.timer); clearInterval(st.rep);
+    if (t === '⌫') {
+      backspace();
+      st.timer = setTimeout(() => { st.rep = setInterval(() => { backspace(); vibrate(4); }, 65); }, 420);
+    } else if (isChar(t) && (ALT[t] || (page === 'abc' && DIGIT[t]))) {
+      st.timer = setTimeout(() => openAlt(st), 360);
+    }
+  }
+  function up(k) { if (k) k.classList.remove('down'); }
+  function openAlt(st) {
+    const t = st.key.dataset.k;
+    let opts = chars(ALT[t] || '');
+    if (page === 'abc' && DIGIT[t]) opts.push(DIGIT[t]);
+    if (page === 'abc' && shift) opts = opts.map(c => c.toUpperCase());
+    if (!opts.length) return;
+    st.alt = opts; st.sel = 0;
+    hidePop();
+    altEl.innerHTML = '';
+    for (const o of opts) { const s = document.createElement('span'); s.textContent = o; altEl.appendChild(s); }
+    altEl.style.display = 'flex';
+    const r = st.key.getBoundingClientRect(), aw = altEl.offsetWidth, ah = altEl.offsetHeight;
+    altEl.style.left = Math.max(4, Math.min(innerWidth - aw - 4, r.left + r.width / 2 - 24)) + 'px';
+    altEl.style.top = (r.top - ah - 6) + 'px';
+    markAlt(st);
+    vibrate(12);
+  }
+  function markAlt(st) { [...altEl.children].forEach((s, i) => s.classList.toggle('sel', i === st.sel)); }
+  function pickAlt(st, x) {
+    const kids = altEl.children;
+    for (let i = 0; i < kids.length; i++) {
+      const r = kids[i].getBoundingClientRect();
+      if (x < r.right + 2 || i === kids.length - 1) { if (st.sel !== i) { st.sel = i; markAlt(st); } return; }
+    }
+  }
+  function closeAlt() { altEl.style.display = 'none'; altEl.innerHTML = ''; }
+  function commit(t) {
+    switch (t) {
+      case 'hide': case '✓': close(); return;
+      case '⌫': return;
+      case '⇧': {
+        const n = performance.now();
+        if (shift === 2) shift = 0;
+        else if (n - lastShift < 320) shift = 2;   // doble toque: bloqueo de mayúsculas
+        else shift = shift ? 0 : 1;
+        lastShift = n; render(); return;
+      }
+      case '?123': page = 'sym'; render(); return;
+      case '=\\<': page = 'sym2'; render(); return;
+      case 'ABC': page = 'abc'; render(); return;
+      case '😊': page = 'emo'; render(); return;
+      case '␣': insert(' '); return;
+      default: insert(label(t));
+    }
+  }
+  root.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    Sound.init();
+    const k = e.target.closest('.k, .osk-hide');
+    if (!k) return;
+    try { root.setPointerCapture(e.pointerId); } catch (x) { /* opcional */ }
+    if (k.classList.contains('osk-hide')) { act.set(e.pointerId, { key: k, hide: true }); return; }
+    const st = { key: k, alt: null, sel: 0, timer: 0, rep: 0 };
+    act.set(e.pointerId, st);
+    down(st);
+  });
+  root.addEventListener('pointermove', e => {
+    const st = act.get(e.pointerId);
+    if (!st || st.hide) return;
+    if (st.alt) { pickAlt(st, e.clientX); return; }
+    if (st.key.dataset.k === '⌫') return;
+    const k = keyAt(e.clientX, e.clientY);
+    if (k && k !== st.key && k.dataset.k !== '⌫') { up(st.key); st.key = k; k.classList.add('down'); showPop(k); clearTimeout(st.timer); if (isChar(k.dataset.k) && (ALT[k.dataset.k] || (page === 'abc' && DIGIT[k.dataset.k]))) st.timer = setTimeout(() => openAlt(st), 360); }
+  });
+  function finish(e, ok) {
+    const st = act.get(e.pointerId);
+    if (!st) return;
+    act.delete(e.pointerId);
+    if (st.hide) { if (ok) close(); return; }
+    clearTimeout(st.timer); clearInterval(st.rep);
+    up(st.key); hidePop();
+    if (st.alt) { const ch = st.alt[st.sel]; closeAlt(); if (ok && ch) insert(ch); return; }
+    if (ok) commit(st.key.dataset.k);
+  }
+  root.addEventListener('pointerup', e => finish(e, true));
+  root.addEventListener('pointercancel', e => finish(e, false));
+  root.addEventListener('contextmenu', e => e.preventDefault());
+
+  function size() {
+    const land = innerWidth > innerHeight;
+    const kh = land ? clamp(innerHeight * 0.092, 28, 42) : clamp(innerHeight * 0.06, 40, 54);
+    root.style.setProperty('--kh', Math.round(kh) + 'px');
+    root.style.setProperty('--kg', (land ? 4 : 7) + 'px');
+  }
+  function keepVisible() {
+    if (!shown || !target) return;
+    document.documentElement.style.setProperty('--kb', root.offsetHeight + 'px');
+    const sc = target.closest('.screen'), f = target.closest('.field') || target;
+    if (!sc) return;
+    const top = root.getBoundingClientRect().top, r = f.getBoundingClientRect();
+    if (r.bottom > top - 14) sc.scrollTop += r.bottom - top + 14;
+    else if (r.top < 10) sc.scrollTop -= 10 - r.top;
+  }
+  function open(inp) {
+    if (shown && target === inp) return;
+    target = inp; page = 'abc'; shift = 0;
+    size(); autoShift(); render(); refresh();
+    root.classList.add('show'); root.setAttribute('aria-hidden', 'false');
+    shown = true;
+    const f = inp.closest('.field'); if (f) f.classList.add('editing');
+    requestAnimationFrame(keepVisible); setTimeout(keepVisible, 260);
+  }
+  function close() {
+    if (!shown) return;
+    shown = false;
+    for (const st of act.values()) { clearTimeout(st.timer); clearInterval(st.rep); }
+    act.clear(); hidePop(); closeAlt();
+    root.classList.remove('show'); root.setAttribute('aria-hidden', 'true');
+    // el hueco del teclado se quita después, para que el toque que lo cerró (p. ej. en «Jugar») no se desplace
+    setTimeout(() => { if (!shown) document.documentElement.style.setProperty('--kb', '0px'); }, 450);
+    if (target) {
+      const f = target.closest('.field'); if (f) f.classList.remove('editing');
+      store.set('name', target.value.trim());
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+  // teclado físico (tableta con teclado) mientras el nuestro está abierto
+  function physical(e) {
+    const k = e.key;
+    if (k === 'Enter' || k === 'Escape' || k === 'Tab') { e.preventDefault(); close(); return; }
+    if (k === 'Backspace') { e.preventDefault(); backspace(); return; }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && chars(k).length === 1) { e.preventDefault(); insert(k); }
+  }
+  // los campos de texto usan este teclado en pantallas táctiles
+  const fields = [...document.querySelectorAll('input[type=text]')];
+  function sync() {
+    const touch = document.body.classList.contains('touch');
+    for (const f of fields) f.readOnly = touch;   // así el teclado del móvil no aparece nunca
+    if (!touch) close();
+  }
+  for (const f of fields) {
+    const box = f.closest('.field') || f;
+    box.addEventListener('touchstart', e => {
+      if (!document.body.classList.contains('touch')) return;
+      e.preventDefault();
+      open(f);
+    }, { passive: false });
+    box.addEventListener('click', e => { if (document.body.classList.contains('touch')) { e.preventDefault(); open(f); } });
+    f.addEventListener('focus', () => { if (document.body.classList.contains('touch')) { f.blur(); open(f); } });
+  }
+  // tocar fuera del teclado lo cierra (el toque sigue funcionando, p. ej. «Jugar»)
+  document.addEventListener('pointerdown', e => {
+    if (!shown) return;
+    const t = e.target;
+    if (root.contains(t) || (target && (target.closest('.field') || target).contains(t))) return;
+    close();
+  }, true);
+  window.addEventListener('resize', () => { if (shown) { size(); requestAnimationFrame(keepVisible); } });
+  sync();
+  return { open, close, sync, physical, get shown() { return shown; } };
+})();
+
 function openSettings() {
   settingsOpen = true;
   settingsOpener = document.activeElement;
