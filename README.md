@@ -69,8 +69,11 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**. Deja una estela de
     imágenes residuales de la célula y una cinta de energía que se estrecha y se apaga hacia la cola (más larga
     en células grandes) con chispas que saltan por detrás, y lo envuelve un aura con halo de luz, dos anillos que
-    giran en sentidos opuestos, pequeños rayos que chispean y chispas en órbita (dorada en el tema blanco); al
-    acabarse se desvanece latiendo, un anillo y chispas al cogerlo y, para el jugador,
+    giran en sentidos opuestos, pequeños rayos que chispean y chispas en órbita (dorada en el tema blanco). En los
+    **últimos 3 s** se vuelve naranja y parpadea cada vez más deprisa (también la fila «⚡ Rayo» del panel) y
+    al terminar se apaga con un chisporroteo. Optimizado: la cinta se pinta en 4 trazos, sin mezcla de luz, y
+    con muchas piezas solo llevan estela y aura completa las 4 mayores (con todos los jugadores con el rayo, de
+    37 a ~50 FPS en un móvil simulado), un anillo y chispas al cogerlo y, para el jugador,
     sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
   - **Bomba 💣:** al tocarla aparece en el centro de tu célula (con la mecha encendida; tu nombre sube por
     encima de ella y la masa baja por debajo para no taparla) y sale el botón
