@@ -34,9 +34,28 @@ Importar: con el mod **GDShare** (Geode) en el editor → *Import* → elige el 
 | 6:06 | Cubo: gran final (azul + rosa) |
 | 6:35 | Cubo: despedida tranquila y fundido a oscuro |
 
+## Monedas secretas (3)
+
+| Tiempo | Dónde |
+|--------|-------|
+| ~0:44 | Flotando sobre una torre de la sección de escaleras (rosa): salta en el momento justo. |
+| ~2:18 | Sobre los pilares de la sección tipo castillo (celeste). |
+| ~6:23 | En el gran final, encima de los orbes amarillos: hay que usar los orbes para llegar. |
+
+El simulador comprueba que cada moneda se puede coger sin morir y terminar la sección.
+
+## Objetos de la 1.0 que usa
+
+Bloque (1), pincho (8), pinchos de suelo de los pozos (9), pincho pequeño (39), medio bloque /
+peldaño (40), trampolín amarillo (35), orbe amarillo (36), portales de cubo, nave y gravedad,
+y colores de fondo y suelo. Todos van en el centro de su casilla, igual que los coloca el
+editor (el propio juego dibuja el peldaño arriba y los pinchos pequeños y el trampolín abajo).
+
 ## Detalles y decoración
 
 - Peldaños de medio bloque flotando sobre pinchos, como los de Stereo Madness (objeto 40).
+- Trampolines amarillos que lanzan a torres de 3 bloques o por encima de pozos largos.
+- Filas de pinchos pequeños y pozos con los pinchos de suelo clásicos.
 - Techos colgantes estilo 1.0 sobre las partes de cubo (almenas, arcos, escalones y filas de
   pinchos colgando), a solo 4–5 bloques sobre el suelo para que se vean en pantalla. Cada
   techo se prueba con el simulador y, si estorba al salto, se sube un bloque.
