@@ -2007,7 +2007,7 @@ function eject(p) {
     did = true;
   }
   if (ejected.length > 500) ejected.splice(0, ejected.length - 500);
-  if (did) { p.protectUntil = 0; resetMerge(p); }
+  if (did) p.protectUntil = 0;   // expulsar bolitas no reinicia la cuenta atrás de unión (solo dividirse y explotar)
   if (did && p === human) Sound.eject();
   return did;
 }
