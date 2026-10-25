@@ -303,6 +303,24 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 /* ============ HUD ============ */
 #hud{position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .35s,visibility .35s}
 #hud.show{opacity:1;visibility:visible}
+/* ---------- Modo espectador ---------- */
+.btn-spec{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;margin-top:-2px}
+#specBar{position:absolute;left:50%;bottom:calc(16px + var(--sb));transform:translateX(-50%);display:none;align-items:center;gap:8px;padding:8px;border-radius:18px;pointer-events:auto;max-width:calc(100vw - 24px)}
+body.spec #specBar{display:flex}
+body.spec #stats,body.spec #pauseBtn,body.spec #touch,body.spec #keys,body.spec #bombBtn{display:none!important}
+body.spec #leaderboard{pointer-events:auto}
+body.spec #lbList li{cursor:pointer}
+body.spec #lbList li.watch{outline:2px solid var(--g1);outline-offset:-2px}
+.sb-btn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--text);background:var(--fill-1);border:1px solid var(--stroke);font-size:16px;font-weight:900;flex:none}
+.sb-btn:active{transform:scale(.94)}
+.sb-auto[aria-pressed="true"]{background:var(--grad-warm);color:#1a1033;border-color:transparent}
+.sb-play{background:var(--grad-main);color:#fff;border-color:transparent}
+.sb-info{display:flex;flex-direction:column;align-items:center;min-width:120px;max-width:44vw;padding:0 6px;line-height:1.15}
+.sb-info b{font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sb-lbl{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sb-lbl em{font-style:normal;color:var(--accent-text)}
+#specMass{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+@media (max-width:420px){.sb-btn{width:38px;height:38px}.sb-info{min-width:90px}}
 #leftCol{position:absolute;top:calc(12px + var(--st));left:calc(12px + var(--sl));display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 #stats{padding:10px 16px 11px;border-radius:18px;min-width:168px}
 #stats .lbl{font-size:10.5px;letter-spacing:.2em;color:var(--muted);font-weight:800}
@@ -543,6 +561,14 @@ body.touch .only-pc{display:none}
     <ol id="lbList"></ol>
   </div>
   <div id="killfeed" aria-live="polite"></div>
+  <div id="specBar" class="glass" aria-label="Modo espectador">
+    <button class="sb-btn" data-spec="prev" aria-label="Anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="sb-info"><span class="sb-lbl">👁 Viendo <em id="specRank">#1</em></span><b id="specName">—</b><span id="specMass">0</span></div>
+    <button class="sb-btn" data-spec="next" aria-label="Siguiente"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="sb-btn sb-auto" data-spec="auto" aria-label="Seguir al líder" aria-pressed="true">👑</button>
+    <button class="sb-btn sb-play" data-spec="play" aria-label="Jugar">▶</button>
+    <button class="sb-btn" data-spec="exit" aria-label="Salir">✕</button>
+  </div>
   <div id="notice"></div>
   <div id="keys">
     <span><kbd>Ratón</kbd> moverse</span>
@@ -602,6 +628,7 @@ body.touch .only-pc{display:none}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
         JUGAR
       </button>
+      <button id="specBtn" class="btn-ghost btn-spec"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>Modo espectador</button>
       <div class="tools">
         <button class="tool" data-act="settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
@@ -1194,6 +1221,16 @@ function drawSpark(x, y, S) {
 }
 const pelletSets = { dark: PELLET_COLORS.map(c => makePelletSprite(c, false)), light: PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true)) };
 let pelletSprites = pelletSets.dark;
+// bolitas sin halo para cuando la cámara está lejos (el halo casi no se ve y era lo más caro de pintar)
+function makePelletDot(col) {
+  const S = 16, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d'), body = g.createRadialGradient(S / 2 - 2, S / 2 - 2, 1, S / 2, S / 2, S / 2);
+  body.addColorStop(0, '#ffffff'); body.addColorStop(0.35, col); body.addColorStop(1, col);
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2, 0, TAU); g.fillStyle = body; g.fill();
+  return cv;
+}
+const pelletDots = { dark: PELLET_COLORS.map(makePelletDot), light: PELLET_COLORS_LIGHT.map(makePelletDot) };
 const PELLET_DRAW = 48 / 11; // tamaño del sprite / radio del núcleo
 
 /* =====================================================================
@@ -1319,6 +1356,7 @@ class Player {
     this.bomb = false;                    // lo que lleva para lanzar: false, 'bomb', 'acid' o 'ice'
     this.bombSince = 0; this.nextBombCheck = 0;
     this.aimA = NaN; this.aimCell = null; // puntería (solo el jugador)
+    this.lastKiller = null;
     this.nextEject = 0;
     this.protectUntil = 0;
     this.kills = 0; this.deaths = 0;      // récord de la sesión (para comparar bots)
@@ -1962,6 +2000,7 @@ function eatCell(a, b) {
 
 function killPlayer(v, k, lastMass) {
   v.alive = false;
+  v.lastKiller = k || null;
   v.boostUntil = 0;
   v.bomb = false;
   dbg.kills++;
@@ -2038,7 +2077,7 @@ function botThink(b) {
   const cells = b.cells, n = cells.length;
   const smart = b.iq >= 2;                // modo Ultra
   // los bots lejos de la pantalla piensan con menos frecuencia (no se nota y ahorra mucho con 200 bots)
-  const c0 = cells[0], lod = players.length > 60 && c0 && !inView(c0.x, c0.y, 1600) ? 2.4 : 1;
+  const c0 = cells[0], lod = players.length > 60 && c0 && !inView(c0.x, c0.y, 700) ? 2.4 : 1;
   b.nextThink = now + (smart && SMART.fast ? 0.04 : 0.06 + (1 - b.skill) * 0.2) * rand(0.8, 1.25) * lod;
 
   let mx = 0, my = 0, tm = 0, sr = 0, big = cells[0];
@@ -2268,12 +2307,15 @@ function botThink(b) {
 
 function botActions(b) {
   const s = b.shoot;
-  if (!s) return;
-  if (s.v.dead || now > s.until) { b.shoot = null; return; }
+  if (!s) { b.speedMul = 1; return; }
+  if (s.v.dead || now > s.until) { b.shoot = null; b.speedMul = 1; return; }
   for (const c of b.cells) c.goalUntil = 0;       // mientras apunta no persigue presas
   const big = biggest(b);
   const dx = s.v.x - big.x, dy = s.v.y - big.y, d = Math.hypot(dx, dy) || 1;
-  b.tx = big.x + (dx / d) * 4; b.ty = big.y + (dy / d) * 4;   // apunta sin avanzar
+  if (d < big.r + s.v.r + 70) { b.shoot = null; b.speedMul = 1; return; }   // demasiado cerca del virus: deja de disparar
+  // apunta al virus avanzando despacio (antes se quedaba parado mientras disparaba)
+  b.tx = big.x + (dx / d) * 600; b.ty = big.y + (dy / d) * 600;
+  b.speedMul = 0.3;
   if (now >= b.nextEject) { eject(b); b.nextEject = now + 0.085; }
 }
 
@@ -2336,7 +2378,18 @@ function moveCells(p, dt) {
     const c = cells[i];
     c.px = c.x; c.py = c.y;
     const hg = c.goalUntil > now;                  // objetivo propio (bots dividiéndose) o el general
-    const dx = (hg ? c.gx : p.tx) - c.x, dy = (hg ? c.gy : p.ty) - c.y, d = Math.sqrt(dx * dx + dy * dy);
+    let gx = hg ? c.gx : p.tx, gy = hg ? c.gy : p.ty;
+    if (p.isBot) { gx = clamp(gx, c.r, WORLD - c.r); gy = clamp(gy, c.r, WORLD - c.r); }   // un objetivo tras el muro se convierte en un punto del muro: se desliza por él
+    let dx = gx - c.x, dy = gy - c.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (p.isBot && d < 40) {
+      // Los bots nunca se quedan quietos: si su objetivo queda encima (o contra el muro), siguen su rumbo,
+      // dándose la vuelta si ese rumbo va hacia el muro.
+      let a = c.ha === c.ha ? c.ha : Math.atan2(c.mvy, c.mvx) || (c.id % 6.283);
+      let ux = Math.cos(a), uy = Math.sin(a);
+      if ((c.x <= c.r + 4 && ux < 0) || (c.x >= WORLD - c.r - 4 && ux > 0)) ux = -ux;
+      if ((c.y <= c.r + 4 && uy < 0) || (c.y >= WORLD - c.r - 4 && uy > 0)) uy = -uy;
+      dx = ux * 400; dy = uy * 400; d = 400;
+    }
     if (d > 1 && mul > 0) {
       let ux = dx / d, uy = dy / d;
       if (p.isBot && p.smooth) {          // los bots giran con inercia en vez de cambiar de rumbo en seco
@@ -2570,7 +2623,8 @@ function update(dt) {
   }
   for (const v of viruses) { v.dr += (v.r - v.dr) * sm; v.rot += dt * 0.15; }
 
-  if (viruses.length < VIRUS_MIN && now >= nextVirusAt) { spawnVirus(); nextVirusAt = now + 1.5; }
+  // si faltan muchos virus (en Ultra se comen ~200 por minuto) reaparecen más deprisa
+  if (viruses.length < VIRUS_MIN && now >= nextVirusAt) { spawnVirus(); nextVirusAt = now + (viruses.length < VIRUS_MIN * 0.85 ? 0.25 : 1.5); }
 
   if (human.alive) {
     const m = human.mass;
@@ -2614,7 +2668,7 @@ let vigGrad = null;
 let dprMax = dpr;
 let mmSize = 160;
 const cam = { x: WORLD / 2, y: WORLD / 2, s: 0.5 };
-let userZoom = 1;
+let userZoom = 1, specZoom = 1;
 let spectate = null, spectatePick = 0;
 const drawList = [];
 
@@ -2633,6 +2687,7 @@ function rebuildGraphics() {
   pelletSets.dark = PELLET_COLORS.map(c => makePelletSprite(c, false));
   pelletSets.light = PELLET_COLORS_LIGHT.map(c => makePelletSprite(c, true));
   pelletSprites = pelletSets[settings.theme];
+  massSprites.clear();
   for (const p of players) { p.setSkin(p.skin); p.nameSprite = null; }
   if (!players.includes(human)) { human.setSkin(human.skin); human.nameSprite = null; }
   try { drawAvatar(); } catch (e) { /* menú aún sin construir */ }
@@ -2685,6 +2740,7 @@ function updateCamera(dt) {
   let target = null;
   if ((state === 'playing' || state === 'paused') && human.alive) target = human;
   else if (state === 'dying') target = deathKiller && deathKiller.alive ? deathKiller : null;
+  else if (state === 'spectating') target = specTarget && specTarget.alive ? specTarget : null;
   else {
     if (!spectate || !spectate.alive || now > spectatePick) { spectate = leader(); spectatePick = now + 9; }
     target = spectate;
@@ -2692,7 +2748,7 @@ function updateCamera(dt) {
   let s = cam.s;
   if (target && target.cells.length) {
     const c = centroid(target);
-    const k = 1 - Math.exp(-dt * (target === human ? 9 : 2.5));
+    const k = 1 - Math.exp(-dt * (target === human ? 9 : state === 'spectating' ? 5 : 2.5));
     let tx = c.x, ty = c.y;
     if (target !== human) {      // al observar (menú), mantén la arena dentro de la pantalla
       const hw = vw / 2 / cam.s, hh = vh / 2 / cam.s;
@@ -2700,9 +2756,29 @@ function updateCamera(dt) {
       ty = hh * 2 < WORLD ? clamp(ty, hh, WORLD - hh) : WORLD / 2;
     }
     cam.x = lerp(cam.x, tx, k); cam.y = lerp(cam.y, ty, k);
-    s = viewScale(c.sr) * (target === human ? userZoom : 0.78);
+    s = viewScale(c.sr) * (target === human ? userZoom : state === 'spectating' ? 0.9 * specZoom : 0.78);
+    // Al observar (menú y espectador) la cámara no se aleja más de ~3.600 px: siguiendo a un gigante se veía
+    // medio mapa a la vez y el móvil tenía que dibujar y pensar por cientos de células (iba a 5 FPS en Ultra)
+    if (target !== human) s = Math.max(s, Math.max(vw, vh) / (state === 'spectating' ? 3600 / Math.min(1.3, Math.max(0.77, specZoom)) : 3600));
   }
   cam.s = lerp(cam.s, s, 1 - Math.exp(-dt * 2.6));
+}
+
+// imágenes de los números de masa, guardadas por texto (los valores se repiten mucho)
+const massSprites = new Map(), MASS_SPR_FS = 44, MASS_SPR_K = 66 / MASS_SPR_FS;
+function getMassSprite(t) {
+  let cv = massSprites.get(t);
+  if (cv) return cv;
+  if (massSprites.size > 900) massSprites.clear();
+  cv = document.createElement('canvas');
+  const g = cv.getContext('2d'), font = `700 ${MASS_SPR_FS}px ${FONT}`;
+  g.font = font;
+  cv.width = Math.ceil(g.measureText(t).width) + 16; cv.height = 66;
+  g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.lineWidth = MASS_SPR_FS * 0.14; g.strokeStyle = 'rgba(0,0,0,0.45)'; g.strokeText(t, cv.width / 2, 34);
+  g.fillStyle = 'rgba(255,255,255,0.92)'; g.fillText(t, cv.width / 2, 34);
+  massSprites.set(t, cv);
+  return cv;
 }
 
 function getNameSprite(p) {
@@ -2909,13 +2985,11 @@ function drawCell(c, s) {
     const ny = holding ? c.y - r * 0.62 : c.y - (showM ? r * 0.1 : 0);
     ctx.drawImage(ns, c.x - w / 2, ny - h / 2, w, h);
     if (showM) {
-      const fs = Math.max(4, Math.round(r * (holding ? 0.19 : 0.24)));
-      const f = `700 ${fs}px ${FONT}`;
-      if (f !== lastFont) { ctx.font = f; lastFont = f; }
-      ctx.lineWidth = fs * 0.14;
-      const t = fmt(c.mass), my = c.y + r * (holding ? 0.62 : 0.34);
-      ctx.strokeText(t, c.x, my);
-      ctx.fillText(t, c.x, my);
+      // la masa se dibuja con una imagen ya preparada de ese número (escribir texto en cada célula y en
+      // cada fotograma era lo más caro del dibujo en el móvil)
+      const fs = r * (holding ? 0.19 : 0.24);
+      const ms = getMassSprite(fmt(c.mass)), mh = fs * MASS_SPR_K, mw = mh * ms.width / ms.height;
+      ctx.drawImage(ms, c.x - mw / 2, c.y + r * (holding ? 0.62 : 0.34) - mh / 2, mw, mh);
     }
   }
 }
@@ -2940,6 +3014,7 @@ function render() {
 
   // comida (con el mapa muy alejado se dibuja solo una parte)
   const pelletStride = s < 0.1 ? 3 : s < 0.2 ? 2 : 1;
+  const farView = s < 0.42, dots = pelletDots[settings.theme];
   const bx0 = clamp(((L - 20) / PG) | 0, 0, PGN - 1), bx1 = clamp(((R + 20) / PG) | 0, 0, PGN - 1);
   const by0 = clamp(((T - 20) / PG) | 0, 0, PGN - 1), by1 = clamp(((B + 20) / PG) | 0, 0, PGN - 1);
   for (let by = by0; by <= by1; by++) {
@@ -2949,6 +3024,7 @@ function render() {
         const p = b[i];
         const age = now - p.born;
         const sc = age < 0.3 ? Math.max(0, age / 0.3) : 1;
+        if (farView) { const S = p.r * 2 * sc; ctx.drawImage(dots[p.ci], p.x - S / 2, p.y - S / 2, S, S); continue; }
         const S = p.r * PELLET_DRAW * sc * (1 + Math.sin(now * 3 + p.ph) * 0.07);
         ctx.drawImage(pelletSprites[p.ci], p.x - S / 2, p.y - S / 2, S, S);
       }
@@ -3096,10 +3172,9 @@ function render() {
   // flecha de puntería (encima de todo): sale de tu célula mayor y apunta hacia donde miras
   if (human.alive && human.cells.length && (state === 'playing' || state === 'paused')) drawAimArrow(s);
 
-  // viñeta del tema
+  // viñeta del tema (no en el modo espectador: un relleno de pantalla completa menos por fotograma)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = vigGrad;
-  ctx.fillRect(0, 0, vw, vh);
+  if (state !== 'spectating') { ctx.fillStyle = vigGrad; ctx.fillRect(0, 0, vw, vh); }
 }
 
 function drawAimArrow(s) {
@@ -3181,10 +3256,15 @@ function rankings() {
   return arr;
 }
 
+document.addEventListener('pointerdown', e => {
+  if (state !== 'spectating') return;
+  const li = e.target.closest && e.target.closest('#lbList li[data-pid]');
+  if (li) { const id = +li.dataset.pid; specWatch(players.find(p => p.id === id)); Sound.click(); }
+});
 function renderLeaderboard() {
   const arr = rankings();
   const top = arr.length ? Math.max(1, arr[0]._m) : 1;
-  const row = (p, i, me) => `<li class="${me ? 'me' : ''}" style="--w:${Math.round(p._m / top * 100)}%"><span class="rk">${i + 1}</span><span class="dot" style="background:${p.color};color:${p.color}"></span><span class="nm">${esc(p.name)}</span><span class="ms">${fmtK(p._m)}</span></li>`;
+  const row = (p, i, me) => `<li data-pid="${p.id}" class="${me ? 'me' : ''}${state === 'spectating' && p === specTarget ? ' watch' : ''}" style="--w:${Math.round(p._m / top * 100)}%"><span class="rk">${i + 1}</span><span class="dot" style="background:${p.color};color:${p.color}"></span><span class="nm">${esc(p.name)}</span><span class="ms">${fmtK(p._m)}</span></li>`;
   let html = '';
   const n = Math.min(10, arr.length);
   for (let i = 0; i < n; i++) html += row(arr[i], i, arr[i] === human);
@@ -3307,6 +3387,7 @@ function resetStats() {
 }
 
 function startGame(keepWorld) {
+  if (state === 'spectating') stopSpectate();
   Sound.init();
   if (isTyping()) document.activeElement.blur();   // cierra el teclado del móvil
   OSK.close();
@@ -3411,6 +3492,7 @@ function resumeGame() {
   showScreen(null);
 }
 function toMenu() {
+  if (state === 'spectating') stopSpectate();
   if (human.alive) { commitBest(); human.cells.length = 0; human.alive = false; rebuildCells(); }
   if (settingsOpen) closeSettings();
   state = 'menu';
@@ -3419,6 +3501,74 @@ function toMenu() {
   updateLifetime();
   showScreen('menu');
 }
+// ---------- Modo espectador (optimizado) ----------
+// Mira la partida de fondo sin jugar: sigue al líder o a quien elijas (◀ ▶ o tocando la clasificación).
+// Para ir fluido: menos partículas, sin viñeta, y la clasificación, la barra y el minimapa se actualizan menos.
+let specTarget = null, specAuto = true, specSwitchAt = 0, savedParticleCap = 0, specDeaths = 0;
+function startSpectate() {
+  Sound.init();
+  OSK.close();
+  if (settingsOpen) closeSettings();
+  if (worldDiff !== settings.diff) buildWorld(settings.diff, false);
+  state = 'spectating';
+  document.body.classList.add('spec');
+  savedParticleCap = particleCap; particleCap = Math.min(particleCap, 90);
+  specAuto = true; specTarget = leader(); specSwitchAt = now + 6; specZoom = 1;
+  blurActive();
+  showScreen(null);
+  hud.classList.add('show');
+  lbT = 0; hudT = 0;
+  syncSpec();
+}
+function stopSpectate() {
+  if (state !== 'spectating') return;
+  document.body.classList.remove('spec');
+  particleCap = savedParticleCap || particleCap;
+  hud.classList.remove('show');
+}
+function specPick(step) {
+  const arr = rankings().filter(p => p !== human && p.alive);
+  if (!arr.length) return;
+  let i = arr.indexOf(specTarget);
+  i = i < 0 ? 0 : (i + step + arr.length) % arr.length;
+  specTarget = arr[i]; specAuto = false; syncSpec();
+}
+function specWatch(p) { if (p && p.alive && p !== human) { specTarget = p; specAuto = false; syncSpec(); } }
+function syncSpec() {
+  const b = document.querySelector('.sb-auto'); if (b) b.setAttribute('aria-pressed', String(specAuto));
+  const t = specTarget;
+  if (!t) return;
+  const r = rankings().indexOf(t);
+  $('specName').textContent = t.name; $('specName').style.color = t.color;
+  $('specRank').textContent = r >= 0 ? '#' + (r + 1) : '';
+  $('specMass').textContent = fmt(t.mass) + ' de masa';
+}
+function updateSpec(dt) {
+  // si el que miras muere (aunque reaparezca enseguida), pasas a quien se lo comió (o al líder)
+  if (!specTarget || !specTarget.alive || specTarget.deaths !== specDeaths) {
+    const k = specTarget && specTarget.lastKiller;
+    specTarget = k && k.alive && k !== human ? k : leader();
+    syncSpec();
+  }
+  if (specTarget) specDeaths = specTarget.deaths;
+  if (specAuto && now > specSwitchAt) { const l = leader(); if (l && l !== specTarget && (!specTarget || l.mass > specTarget.mass * 1.15)) specTarget = l; specSwitchAt = now + 4; }
+  lbT -= dt; hudT -= dt; mmT -= dt;
+  if (lbT <= 0) { lbT = 0.8; renderLeaderboard(); }
+  if (hudT <= 0) { hudT = 0.3; syncSpec(); }
+  if (mmT <= 0) { mmT = 1 / 10; drawMinimap(); }
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-spec]');
+  if (!b || state !== 'spectating') return;
+  Sound.click();
+  const a = b.dataset.spec;
+  if (a === 'prev') specPick(-1);
+  else if (a === 'next') specPick(1);
+  else if (a === 'auto') { specAuto = !specAuto; if (specAuto) { specTarget = leader(); specSwitchAt = now + 4; } syncSpec(); }
+  else if (a === 'play') { stopSpectate(); startGame(); }
+  else if (a === 'exit') { stopSpectate(); toMenu(); }
+});
+
 function updateLifetime() {
   $('bestVal').textContent = fmt(store.get('best', 0));
   $('gamesVal').textContent = fmt(store.get('games', 0));
@@ -3488,6 +3638,7 @@ document.addEventListener('dblclick', e => e.preventDefault());
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   if (state === 'playing') userZoom = clamp(userZoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 1.7);
+  else if (state === 'spectating') specZoom = clamp(specZoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.45, 1.8);
 }, { passive: false });
 
 function bindHold(btn, down, up) {
@@ -3513,6 +3664,14 @@ window.addEventListener('keydown', e => {
   if (OSK.shown) { OSK.physical(e); return; }
   const k = e.key;
   if (k === 'Escape' && settingsOpen) { closeSettings(); return; }
+  if (state === 'spectating') {
+    if (k === 'Escape') { stopSpectate(); toMenu(); }
+    else if (k === 'ArrowLeft') specPick(-1);
+    else if (k === 'ArrowRight' || k === 'Tab') { e.preventDefault(); specPick(1); }
+    else if (k === 'Enter') { stopSpectate(); startGame(); }
+    else if (k === 'l' || k === 'L') { specAuto = true; specTarget = leader(); syncSpec(); }
+    return;
+  }
   const tag = e.target && e.target.tagName;
   if (tag === 'INPUT') {
     // en el móvil, «Hecho» del teclado solo termina de escribir; en PC, Enter empieza la partida
@@ -4011,6 +4170,7 @@ function buildUI() {
   document.addEventListener('webkitfullscreenchange', onFs);
 
   $('playBtn').addEventListener('click', () => startGame());
+  $('specBtn').addEventListener('click', () => { Sound.click(); startSpectate(); });
   $('againBtn').addEventListener('click', () => startGame(true));
   $('toMenuBtn').addEventListener('click', () => { Sound.click(); toMenu(); });
   $('resumeBtn').addEventListener('click', () => { Sound.click(); resumeGame(); });
@@ -4051,7 +4211,7 @@ function syncUI() {
 let last = performance.now();
 let fpsAcc = 0, fpsN = 0, slowChecks = 0, fastChecks = 0;
 const STEP = 1 / 60;
-let simStep = STEP;   // en dispositivos lentos la simulación da pasos de 1/30 s (la mitad de trabajo)
+let simStep = STEP, menuSkip = false;   // en dispositivos lentos la simulación da pasos de 1/30 s (la mitad de trabajo)
 
 function frame(t) {
   requestAnimationFrame(frame);
@@ -4083,7 +4243,8 @@ function frame(t) {
   }
 
   if (state !== 'paused') {
-    const steps = Math.min(4, Math.ceil(dt / simStep - 0.01));   // con el móvil lento no se acumulan pasos (evita tirones en cadena)
+    // con el móvil lento no se acumulan pasos (evita tirones en cadena); mirando (menú/espectador) como mucho 2
+    const steps = Math.min(state === 'menu' || state === 'spectating' ? 2 : 4, Math.ceil(dt / simStep - 0.01));
     const sdt = dt / steps;
     const t0 = performance.now();
     for (let i = 0; i < steps; i++) update(sdt);
@@ -4093,9 +4254,12 @@ function frame(t) {
 
   updateCamera(dt);
   const t1 = performance.now();
-  render();
+  // el fondo del menú (tapado y difuminado por el menú) se pinta un fotograma sí y otro no en móviles lentos
+  menuSkip = state === 'menu' && simStep !== STEP ? !menuSkip : false;
+  if (!menuSkip) render();
   const t2 = performance.now();
   if (state === 'playing' || state === 'dying' || state === 'paused') updateHud(dt);
+  else if (state === 'spectating') updateSpec(dt);
   dbg.tRender = (dbg.tRender || 0) * 0.95 + (t2 - t1) * 0.05;
   dbg.tHud = (dbg.tHud || 0) * 0.95 + (performance.now() - t2) * 0.05;
 }
@@ -4109,7 +4273,7 @@ buildUI();
 applyQuality();            // fija la resolución y llama a resize()
 buildWorld(settings.diff);
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(() => { for (const p of players) p.nameSprite = null; human.nameSprite = null; });
+  document.fonts.ready.then(() => { for (const p of players) p.nameSprite = null; human.nameSprite = null; massSprites.clear(); });
 }
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 

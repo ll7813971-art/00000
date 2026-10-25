@@ -100,6 +100,17 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   moviéndote o con el rayo), desde la pieza de la que sale la flecha y sin sumarle la velocidad de la célula.
 - **Bots divididos como un solo jugador:** las piezas de un bot dividido van todas juntas hacia el mismo
   objetivo, como las tuyas; ya no persigue cada pieza a su propia presa.
+- **Bots siempre en movimiento:** si su objetivo queda encima de ellos o al otro lado del muro, siguen su rumbo
+  (dándose la vuelta contra el muro) en vez de pararse; al disparar a un virus avanzan despacio hacia él.
+- **Modo espectador** (botón en el menú): mira la partida sin jugar. Sigue al líder (👑) o a quien elijas con
+  ◀ ▶ (o ← →) o tocando su fila en la clasificación; si el que miras muere, pasas a quien se lo comió.
+  Rueda para acercar/alejar, ▶ para jugar, ✕ o Esc para volver. Optimizado: la cámara no se aleja más de
+  ~3.600 px, menos partículas, sin viñeta y la clasificación, la barra y el minimapa se refrescan menos.
+- **Más optimización:** la masa de cada célula se pinta con imágenes ya preparadas (escribir texto en cada
+  célula era lo más caro del dibujo), con la cámara lejos las bolitas se pintan sin halo, mirando (menú o
+  espectador) no se acumulan más de 2 pasos por fotograma y el fondo del menú se pinta a la mitad en móviles
+  lentos. En un móvil simulado 4 veces más lento: menú de Ultra de ~5 a ~33 FPS, espectador en Normal ~44 FPS.
+- **Virus en Ultra:** cuando faltan muchos reaparecen más deprisa (antes el mapa se iba quedando sin virus).
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.
