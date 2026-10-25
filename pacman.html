@@ -120,8 +120,9 @@ function approach(v, t, s) { return v < t ? Math.min(t, v + s) : Math.max(t, v -
 function newGame() {
   score = 0; level = 1; lives = 3; extraGiven = false; levelFruits = [];
   startLevel();
-  state = 'ready'; stateT = 260; firstReady = true;
-  playIntro();
+  state = 'ready'; stateT = 278; firstReady = true;
+  sfxCredit();
+  playIntro(0.3);
 }
 
 function startLevel() {
@@ -253,12 +254,13 @@ function update() {
       if (stateT === 60) sfxDeath();
       if (stateT >= 210) {
         lives--;
-        if (lives <= 0) { state = 'gameover'; stateT = 0; }
+        if (lives <= 0) { state = 'gameover'; stateT = 0; sfxGameOver(); }
         else { resetActors(); useGlobal = true; globalDots = 0; elroyOn = false; state = 'ready'; stateT = 120; }
       }
       break;
     case 'clear':
-      if (++stateT >= 190) { level++; startLevel(); state = 'ready'; stateT = 120; }
+      if (++stateT === 60) sfxLevelClear();
+      if (stateT >= 190) { level++; startLevel(); state = 'ready'; stateT = 120; }
       break;
     case 'gameover':
       if (++stateT >= 240) state = 'title';
@@ -294,12 +296,14 @@ function updatePac() {
   if (pac.pause > 0) { pac.pause--; return; }
   if (pac.next !== null && pac.next === opp(pac.dir) && pac.moving) pac.dir = pac.next;
   const sp = (frightT > 0 ? cfg.pacF : cfg.pac) * BASE;
+  const oldX = pac.x;
   pac.anim += step(pac, sp, pacCenter);
+  if (Math.abs(pac.x - oldX) > 100) sfxTunnel();
   const [tx, ty] = tileOf(pac);
   if (tx < 0 || tx >= COLS) return;
   const ch = grid[ty][tx];
   if (ch === '.') { grid[ty][tx] = ' '; score += 10; pac.pause = 1; dotEaten(); sfxWaka(); }
-  else if (ch === 'o') { grid[ty][tx] = ' '; score += 50; pac.pause = 3; dotEaten(); energize(); }
+  else if (ch === 'o') { grid[ty][tx] = ' '; score += 50; pac.pause = 3; dotEaten(); energize(); sfxPower(); }
   if (fruitT > 0 && ty === 17 && (tx === 13 || tx === 14)) {
     score += cfg.fruit[1]; fruitT = 0; fruitScoreT = 120; sfxFruit();
   }
@@ -331,7 +335,7 @@ function releaseGhosts() {
   } else if (dotCounts[g.name] >= cfg.dotLimits[g.name]) release(g);
   if (g.state === 'house' && idleT >= (level < 5 ? 240 : 180)) { idleT = 0; release(g); }
 }
-function release(g) { g.state = 'leave'; if (g.name === 'clyde') elroyOn = true; }
+function release(g) { g.state = 'leave'; if (g.name === 'clyde') elroyOn = true; sfxRelease(); }
 
 function updateGhost(g) {
   const gs = cfg.ghost * BASE;
@@ -369,7 +373,7 @@ function updateGhost(g) {
       if (g.x !== 112) { g.dir = g.x < 112 ? RIGHT : LEFT; g.x = approach(g.x, 112, sp); }
       else {
         g.dir = DOWN; g.y = approach(g.y, 116, sp);
-        if (g.y === 116) { g.state = 'leave'; g.fright = false; }
+        if (g.y === 116) { g.state = 'leave'; g.fright = false; sfxRevive(); }
       }
       break;
     }
@@ -389,7 +393,7 @@ function checkCollide() {
       score += pts;
       popup = { x: g.x, y: g.y, text: String(pts), ghost: g };
       state = 'eatPause'; stateT = 60;
-      sfxEatGhost();
+      sfxEatGhost(ghostCombo);
     } else {
       state = 'dying'; stateT = 0;
       if (score > high) high = score;
@@ -425,16 +429,50 @@ function tone(f0, f1, dur, type, vol, delay) {
   o.connect(g); g.connect(master);
   o.start(t); o.stop(t + dur + 0.02);
 }
-function playIntro() {
-  const U = 0.13;
+function melody(notes, U, type, vol, delay) {
+  let t = delay || 0;
+  for (const [n, d] of notes) { if (n) tone(midi(n), midi(n), d * U * 0.9, type, vol, t); t += d * U; }
+  return t;
+}
+function playIntro(delay) {
+  const U = 0.13, t = delay || 0;
   const mel = [[71,1],[83,1],[78,1],[75,1],[83,.5],[78,1.5],[75,2],
                [72,1],[84,1],[79,1],[76,1],[84,.5],[79,1.5],[76,2],
                [71,1],[83,1],[78,1],[75,1],[83,.5],[78,1.5],[75,2],
                [75,.5],[76,.5],[77,1],[77,.5],[78,.5],[79,1],[79,.5],[80,.5],[81,1],[83,2]];
-  let t = 0;
-  for (const [n, d] of mel) { tone(midi(n), midi(n), d * U * 0.9, 'square', 0.1, t); t += d * U; }
+  melody(mel, U, 'square', 0.1, t);
   const bass = [47,59,47,59, 48,60,48,60, 47,59,47,59, 54,56,58,59];
-  bass.forEach((n, i) => tone(midi(n), midi(n), 2 * U * 0.8, 'triangle', 0.25, i * 2 * U));
+  bass.forEach((n, i) => tone(midi(n), midi(n), 2 * U * 0.8, 'triangle', 0.25, t + i * 2 * U));
+}
+// moneda insertada al empezar la partida
+function sfxCredit() { tone(800, 2000, 0.08, 'square', 0.1); tone(1200, 2600, 0.12, 'square', 0.08, 0.09); }
+// píldora de poder: subida rápida
+function sfxPower() { tone(200, 900, 0.15, 'square', 0.1); tone(300, 1200, 0.15, 'square', 0.08, 0.12); }
+// cada fantasma comido en la misma píldora suena más agudo
+function sfxEatGhost(combo) {
+  const k = 1 + ((combo || 1) - 1) * 0.25;
+  tone(150 * k, 1300 * k, 0.45, 'square', 0.1);
+  tone(1300 * k, 1600 * k, 0.1, 'triangle', 0.15, 0.45);
+}
+function sfxRelease() { tone(260, 520, 0.08, 'triangle', 0.12); }
+function sfxRevive() { tone(900, 300, 0.15, 'square', 0.06); tone(300, 600, 0.1, 'square', 0.06, 0.16); }
+function sfxTunnel() { tone(120, 60, 0.25, 'sawtooth', 0.08); }
+function sfxBlip(f) { tone(f, f, 0.07, 'square', 0.1); }
+function togglePause() {
+  paused = !paused;
+  if (paused) { tone(880, 880, 0.07, 'square', 0.1); tone(440, 440, 0.1, 'square', 0.1, 0.08); }
+  else { tone(440, 440, 0.07, 'square', 0.1); tone(880, 880, 0.1, 'square', 0.1, 0.08); }
+}
+function sfxLevelClear() {
+  const U = 0.1;
+  melody([[72,1],[76,1],[79,1],[84,2],[0,1],[79,1],[84,3]], U, 'square', 0.1);
+  melody([[48,2],[55,2],[48,2],[60,4]], U, 'triangle', 0.25);
+  tone(midi(88), midi(96), 0.4, 'triangle', 0.08, 10 * U);
+}
+function sfxGameOver() {
+  const U = 0.16;
+  melody([[67,1],[66,1],[65,1],[64,2],[0,1],[60,1],[55,1],[48,3]], U, 'square', 0.1, 0.3);
+  melody([[43,4],[41,4],[36,3]], U, 'triangle', 0.25, 0.3);
 }
 function sfxWaka() {
   if (!actx || muted) return;
@@ -444,7 +482,6 @@ function sfxWaka() {
   tone(wakaToggle ? 480 : 200, wakaToggle ? 200 : 480, 0.11, 'triangle', 0.3);
   wakaEnd = t + 0.11;
 }
-function sfxEatGhost() { tone(150, 1300, 0.5, 'square', 0.1); }
 function sfxFruit() { tone(400, 1000, 0.12, 'square', 0.1); tone(400, 1000, 0.12, 'square', 0.1, 0.14); }
 function sfxExtra() { for (let i = 0; i < 6; i++) tone(1046, 1046, 0.08, 'square', 0.1, i * 0.12); }
 function sfxDeath() {
@@ -463,10 +500,14 @@ function updateSiren() {
     if (ghosts.some(g => g.state === 'eaten' || g.state === 'enter')) {
       f = 600 + 700 * ((frame % 10) / 10); v = 0.12;
     } else if (frightT > 0) {
-      f = 180 + 260 * ((frame % 16) / 16); v = 0.15;
+      // cuando los fantasmas empiezan a parpadear el sonido se acelera
+      const per = frightT <= cfg.flashes * 28 ? 8 : 16;
+      f = 180 + 260 * ((frame % per) / per); v = 0.15;
     } else {
-      const p = (frame % 36) / 36, prog = 1 - dotsLeft / 244;
-      f = 360 + prog * 260 + 260 * (p < 0.5 ? p * 2 : 2 - p * 2); v = 0.12;
+      // sirena en 5 fases, cada vez más aguda y rápida según quedan menos puntos
+      const stage = dotsLeft > 180 ? 0 : dotsLeft > 120 ? 1 : dotsLeft > 70 ? 2 : dotsLeft > 30 ? 3 : 4;
+      const per = [36, 32, 28, 24, 20][stage], p = (frame % per) / per;
+      f = 360 + stage * 70 + 260 * (p < 0.5 ? p * 2 : 2 - p * 2); v = 0.12;
     }
   }
   const t = actx.currentTime;
@@ -786,8 +827,8 @@ window.addEventListener('keydown', e => {
   initAudio();
   if (e.code in KEYS) { setDir(KEYS[e.code]); e.preventDefault(); return; }
   if (e.code === 'Enter' || e.code === 'Space') { startOrResume(); e.preventDefault(); }
-  if ((e.code === 'KeyP' || e.code === 'Escape') && state !== 'title') paused = !paused;
-  if (e.code === 'KeyM') muted = !muted;
+  if ((e.code === 'KeyP' || e.code === 'Escape') && state !== 'title') togglePause();
+  if (e.code === 'KeyM') { if (!muted) sfxBlip(440); muted = !muted; if (!muted) sfxBlip(880); }
 });
 
 let touchStart = null;
@@ -810,7 +851,7 @@ pad.querySelectorAll('button').forEach(b => b.addEventListener('pointerdown', e 
   e.preventDefault();
   startOrResume();
   const d = b.dataset.d;
-  if (d === 'p') { if (state !== 'title') paused = !paused; }
+  if (d === 'p') { if (state !== 'title') togglePause(); }
   else setDir(+d);
 }));
 document.addEventListener('visibilitychange', () => {
