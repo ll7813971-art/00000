@@ -66,8 +66,11 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Poderes:** el mapa tiene huecos de poder (8 en los mapas normales, 44 en Ultra). Cada hueco libre tira
   cada 4 s: **30 % rayo**, **19 % bomba**, **11 % ácido**, **4 % hielo** y, si no, se queda vacío hasta la
   siguiente tirada. Salen en el minimapa (rayos en amarillo, bombas en rojo, ácido en verde, hielo en azul).
-  - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**, con una estela de su
-    color, un aura eléctrica que parpadea al acabarse, un anillo y chispas al cogerlo y, para el jugador,
+  - **Rayo ⚡:** el jugador o el bot que lo toque va **1,5 veces más rápido durante 15 s**. Deja una estela de
+    imágenes residuales de la célula y una cinta de energía que se estrecha y se apaga hacia la cola (más larga
+    en células grandes) con chispas que saltan por detrás, y lo envuelve un aura con halo de luz, dos anillos que
+    giran en sentidos opuestos, pequeños rayos que chispean y chispas en órbita (dorada en el tema blanco); al
+    acabarse se desvanece latiendo, un anillo y chispas al cogerlo y, para el jugador,
     sonido, vibración y la cuenta atrás «⚡ Rayo 0:15». Coger otro mientras dura reinicia los 15 s.
   - **Bomba 💣:** al tocarla aparece en el centro de tu célula (con la mecha encendida; tu nombre sube por
     encima de ella y la masa baja por debajo para no taparla) y sale el botón
