@@ -73,6 +73,14 @@
     #knob{left:33px;top:33px;width:46px;height:46px}
   }
   @media (max-height:420px){ #info{display:none} #controls{display:none} }
+  /* móvil en vertical: botones en columna a la derecha para no tapar la información */
+  @media (orientation:portrait) and (max-width:600px){
+    #tFly{right:12px!important;top:12px!important} #tInv{right:12px!important;top:70px!important;}
+    #tCam{right:12px!important;top:128px!important} #tFs{right:12px!important;top:186px!important}
+    #tPause{left:12px!important;top:auto!important;bottom:200px!important}
+    #tip{display:none}
+    #joy{bottom:84px}
+  }
 </style>
 </head>
 <body>
@@ -969,7 +977,7 @@ const MOBS = {
     name: 'Slime', hw: 0.3, h: 0.6, speed: 2.6, hp: 3, sound: 'slime', egg: ['#6ad35a', '#2e7d22'],
     build(e, o) {
       const s = o.size || [0.6, 0.9, 1.2][Math.floor(Math.random() * 3)];
-      e.size = s; e.hw = s * 0.48; e.h = s * 0.95; e.hp = Math.round(s * 4);
+      e.size = s; e.hw = Math.min(s * 0.48, 0.45); e.h = s * 0.95; e.hp = Math.round(s * 4);
       const body = pivot(e.group, 0, 0, 0);
       mkBox(body, s * 0.56, s * 0.56, s * 0.56, 0x3f9a36, 0, s / 2, 0);
       eyes(body, s * 0.2, s * 0.62, s / 2 + 0.005, s * 0.14);
@@ -1037,6 +1045,9 @@ class Mob {
     this.group = new THREE.Group(); this.parts = {};
     def.build(this, o);
     if (o.baby) { this.baby = 150; this.group.scale.setScalar(0.55); this.hw *= 0.55; this.h *= 0.6; }
+    this.hopFails = 0; this.repathT = 0;
+    // si aparece dentro de un bloque, lo saca hacia arriba
+    for (let k = 0; k < 4 && boxHits(this.pos.x, this.pos.y, this.pos.z, this.hw, this.h); k++) this.pos.y = Math.floor(this.pos.y) + 1;
     this.mats = [];
     this.group.traverse(m => { if (m.material && m.material.emissive) this.mats.push(m.material); });
     scene.add(this.group);
@@ -1052,7 +1063,7 @@ class Mob {
   hit(dir) {
     if (this.type === 'tnt') { this.vel.x += dir.x * 6; this.vel.z += dir.z * 6; this.vel.y = 4; return; }
     if (this.def.invulnerable) { this.happy = 1.2; sfxAt('chispa', this.pos); hearts(this.pos.x, this.pos.y + 0.6, this.pos.z); return; }
-    this.hp--; this.hurt = 0.35; this.panic = 5;
+    this.hp--; this.hurt = 0.35; this.panic = 5; this.path = null; this.thinkT = 0; this.repathT = 0;
     this.vel.x += dir.x * 7; this.vel.z += dir.z * 7; this.vel.y = 5.5;
     if (this.def.fly) this.knock = new THREE.Vector3(dir.x * 6, 3, dir.z * 6);
     sfxAt('hit', this.pos);
@@ -1235,18 +1246,49 @@ function nearestTNT(pos, r) {
   return best;
 }
 const heightCells = (e) => Math.max(1, Math.ceil(e.h - 0.05));
-function goTo(e, t, near) {
-  if (pathBudget <= 0) return false;
+// celda de partida: si está en el aire o en el borde, busca el suelo de debajo o una celda vecina pisable
+function startCell(e, hc) {
+  const x = Math.floor(e.pos.x), y = Math.floor(e.pos.y + 0.05), z = Math.floor(e.pos.z);
+  for (let k = 0; k <= 3; k++) if (standable(x, y - k, z, hc)) return [x, y - k, z];
+  if (standable(x, y + 1, z, hc)) return [x, y + 1, z];
+  let best = null, bd = 9;
+  for (const [dx, dz] of DIRS8) {
+    const nx = Math.floor(e.pos.x + dx * e.hw), nzz = Math.floor(e.pos.z + dz * e.hw);
+    if (standable(nx, y, nzz, hc)) { const d = (nx + 0.5 - e.pos.x) ** 2 + (nzz + 0.5 - e.pos.z) ** 2; if (d < bd) { bd = d; best = [nx, y, nzz]; } }
+  }
+  return best || [x, y, z];
+}
+function goTo(e, t, near, retry) {
+  if (pathBudget <= 0 || (!retry && e.repathT > 0)) return false;
   const hc = heightCells(e);
-  const sx = Math.floor(e.pos.x), sy = Math.floor(e.pos.y + 0.05), sz = Math.floor(e.pos.z);
+  const [sx, sy, sz] = startCell(e, hc);
   let ty = Math.floor(t.y);
   const gy = groundNear(t.x, t.y, t.z, hc);
   if (gy !== null) ty = gy;
   const res = findPath(sx, sy, sz, Math.floor(t.x), ty, Math.floor(t.z), hc, 700, near);
-  e.goal = new THREE.Vector3(t.x, ty, t.z); e.goalAge = 0;
+  e.goal = new THREE.Vector3(t.x, ty, t.z); e.goalAge = 0; e.goalNear = near;
+  if (!retry) e.fails = 0;
   if (res.path.length > 1) { e.path = res.path; e.pi = 1; e.stuckT = 0; e.stuckPos.copy(e.pos); return true; }
-  e.path = null;
+  e.path = null; e.repathT = 0.8;
   return false;
+}
+// atascado: salta, y si sigue igual recalcula la ruta desde donde está; tras varios intentos se rinde
+function onStuck(e) {
+  e.fails = (e.fails || 0) + 1;
+  if (e.onGround) e.vel.y = 8.2;
+  const g = e.goal;
+  e.path = null;
+  if (e.fails <= 3 && g) { pathBudget = Math.max(pathBudget, 1); goTo(e, g, e.goalNear || 0.5, true); }
+  if (!e.path) { e.fails = 0; e.idleT = 0; e.thinkT = 0; e.repathT = 1; }
+}
+// si alguien ha puesto o quitado bloques en el camino, la ruta se recalcula
+function checkPath(e) {
+  if (!e.path || !e.goal) return;
+  const hc = heightCells(e);
+  for (let j = e.pi; j < Math.min(e.path.length, e.pi + 5); j++) {
+    const n = e.path[j];
+    if (!standable(n[0], n[1], n[2], hc)) { e.path = null; goTo(e, e.goal, e.goalNear || 0.5, true); return; }
+  }
 }
 function goAway(e, from, dist) {
   const dir = new THREE.Vector3(e.pos.x - from.x, 0, e.pos.z - from.z);
@@ -1299,6 +1341,7 @@ function checkDanger(e) {
 }
 function think(e) {
   e.lookAt = null;
+  checkPath(e);
   if (checkDanger(e)) return;
   const P = player.pos, dP = e.pos.distanceTo(P);
   const it = hotbar[sel];
@@ -1363,6 +1406,7 @@ function tickTimers(e, dt) {
   if (e.panic > 0) e.panic -= dt;
   if (e.baby > 0) { e.baby -= dt; if (e.baby <= 0) growUp(e); }
   if (e.idleT > 0) e.idleT -= dt;
+  if (e.repathT > 0) e.repathT -= dt;
 }
 function updateGround(e, dt) {
   tickTimers(e, dt);
@@ -1370,15 +1414,15 @@ function updateGround(e, dt) {
   const speed = e.def.speed * e.speedMul * (e.baby > 0 ? 1.15 : 1);
   let tvx = 0, tvz = 0;
   if (e.path) {
-    advancePath(e, 0.32);
+    advancePath(e, 0.3);
     if (e.path) {
       const n = e.path[e.pi], dx = n[0] + 0.5 - e.pos.x, dz = n[2] + 0.5 - e.pos.z, d = Math.hypot(dx, dz) || 1;
       const k = d < 0.3 && e.pi === e.path.length - 1 ? d / 0.3 : 1;
       tvx = dx / d * speed * k; tvz = dz / d * speed * k;
       e.targetYaw = Math.atan2(dx, dz);
-      if (n[1] > e.pos.y + 0.4 && e.onGround && d < 1.5) e.vel.y = 7.6;
+      if (n[1] > e.pos.y + 0.4 && e.onGround && d < 1.3) e.vel.y = 8.2;
       e.stuckT += dt;
-      if (e.stuckT > 1.3) { if (e.pos.distanceTo(e.stuckPos) < 0.3) { e.path = null; e.idleT = 0; e.thinkT = 0; } e.stuckT = 0; e.stuckPos.copy(e.pos); }
+      if (e.stuckT > 1) { if (e.pos.distanceTo(e.stuckPos) < 0.3) onStuck(e); e.stuckT = 0; e.stuckPos.copy(e.pos); }
     }
   } else if (e.swimTarget) {
     const dx = e.swimTarget.x - e.pos.x, dz = e.swimTarget.z - e.pos.z, d = Math.hypot(dx, dz) || 1;
@@ -1386,7 +1430,8 @@ function updateGround(e, dt) {
     if (d < 0.6) e.swimTarget = null;
   } else if (e.lookAt && (e.mode === 'follow' || e.mode === 'love')) e.targetYaw = Math.atan2(e.lookAt.x - e.pos.x, e.lookAt.z - e.pos.z);
   e.yaw += wrapAng(e.targetYaw - e.yaw) * Math.min(1, dt * 6);
-  const k = e.onGround ? Math.min(1, dt * 10) : Math.min(1, dt * 1.5);
+  // en el aire mantiene el control si sigue una ruta (así sube bien los escalones)
+  const k = e.onGround ? Math.min(1, dt * 10) : Math.min(1, dt * (e.path ? 6 : 1.5));
   e.vel.x += (tvx - e.vel.x) * k; e.vel.z += (tvz - e.vel.z) * k;
   const wet = inWaterAt(e.pos.x, e.pos.y + e.h * 0.4, e.pos.z);
   if (wet) e.vel.y += (2.2 - e.vel.y) * Math.min(1, dt * 4);
@@ -1394,7 +1439,7 @@ function updateGround(e, dt) {
   if (e.type === 'chicken' && e.vel.y < -2.2) e.vel.y = -2.2;
   moveEntity(e, dt);
   if (e.bounced) sfxAt('boing', e.pos);
-  if (e.hitWall && (e.onGround || wet) && (tvx || tvz)) e.vel.y = 7.6;
+  if (e.hitWall && (e.onGround || wet) && (tvx || tvz)) e.vel.y = 8.2;
   const hs = Math.hypot(e.vel.x, e.vel.z);
   e.phase += hs * dt * 5;
   const sw = Math.sin(e.phase) * 0.7 * Math.min(1, hs / 1.2);
@@ -1413,6 +1458,7 @@ function updateGround(e, dt) {
   }
 }
 function thinkSlime(e) {
+  checkPath(e);
   if (checkDanger(e)) return;
   const dP = e.pos.distanceTo(player.pos);
   if (dP < 12 && playing) {
@@ -1433,19 +1479,31 @@ function updateSlime(e, dt) {
     e.vel.x *= Math.max(0, 1 - dt * 12); e.vel.z *= Math.max(0, 1 - dt * 12);
     e.hopT -= dt;
     if (e.hopT <= 0) {
-      let up = 0, sp = e.def.speed * (0.8 + e.size * 0.4) * (e.mode === 'flee' ? 1.6 : 1);
-      advancePath(e, 0.7);
+      const maxSp = e.def.speed * (0.8 + e.size * 0.4) * (e.mode === 'flee' ? 1.6 : 1);
+      let sp = maxSp, vy = 5 + e.size * 2.5;
+      advancePath(e, 0.45);
       if (e.path) {
-        const n = e.path[e.pi];
-        e.yaw = Math.atan2(n[0] + 0.5 - e.pos.x, n[2] + 0.5 - e.pos.z);
-        up = n[1] > e.pos.y + 0.4 ? 1.8 : 0;
-        sp = Math.min(sp, Math.hypot(n[0] + 0.5 - e.pos.x, n[2] + 0.5 - e.pos.z) * 2.2 + 1);
+        // salta justo hasta el siguiente nodo (o el de después si va recto y al mismo nivel)
+        let n = e.path[e.pi];
+        const n2 = e.path[e.pi + 1];
+        if (n2 && n2[1] === n[1] && n[1] <= Math.floor(e.pos.y + 0.05) && Math.hypot(n2[0] + 0.5 - e.pos.x, n2[2] + 0.5 - e.pos.z) < 2.2 && passCol(n[0], n[1], n[2], heightCells(e))) n = n2;
+        const dx = n[0] + 0.5 - e.pos.x, dz = n[2] + 0.5 - e.pos.z, d = Math.hypot(dx, dz);
+        if (n[1] > e.pos.y + 0.4) vy += 2.2;
+        e.yaw = Math.atan2(dx, dz);
+        sp = Math.min(maxSp * 1.4, d / (2 * vy / 24));
+        // contador de saltos sin acercarse: atascado
+        if (e.lastHopD !== undefined && d >= e.lastHopD - 0.1 && e.lastHopNode === e.pi) { if (++e.hopFails > 3) { e.hopFails = 0; onStuck(e); } }
+        else e.hopFails = 0;
+        e.lastHopD = d; e.lastHopNode = e.pi;
       } else if (e.mode === 'curious') { e.yaw = Math.atan2(player.pos.x - e.pos.x, player.pos.z - e.pos.z); sp = 0; }
       else if (e.mode === 'idle') sp = 0;
-      e.vel.set(Math.sin(e.yaw) * sp, 5 + e.size * 2.5 + up, Math.cos(e.yaw) * sp);
-      e.hopT = (e.mode === 'flee' || e.mode === 'curious') ? 0.3 + Math.random() * 0.4 : 0.7 + Math.random() * 1.3;
+      e.vel.set(Math.sin(e.yaw) * sp, vy, Math.cos(e.yaw) * sp);
+      e.hopVX = e.vel.x; e.hopVZ = e.vel.z;
+      e.hopT = e.path ? 0.12 + Math.random() * 0.25 : (e.mode === 'curious' ? 0.4 + Math.random() * 0.5 : 0.7 + Math.random() * 1.3);
     }
   }
+  // en el aire conserva el impulso aunque roce una pared (si no, nunca sube los escalones)
+  else if (e.path && e.hopVX !== undefined) { e.vel.x = e.hopVX; e.vel.z = e.hopVZ; }
   if (wet) e.vel.y += (2 - e.vel.y) * Math.min(1, dt * 4); else e.vel.y -= 24 * dt;
   const wasAir = !e.onGround;
   moveEntity(e, dt);
@@ -2442,7 +2500,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  pathBudget = 2500;
+  pathBudget = touchMode ? 1400 : 2500;
   if (playing) {
     updatePlayer(dt);
     repeatActions(dt);

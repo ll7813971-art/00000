@@ -40,3 +40,7 @@ Para programar: el código está en `index.html` (usa `lib/three.min.js`); `Cubo
 | F11 | pantalla completa |
 
 Cada partida es un mundo nuevo. Para repetir uno, abre `index.html?semilla=1234`.
+
+## Pruebas del pathfinding
+Con Node y Playwright: `node pruebas/rutas.js` (90 rutas por tipo de criatura en 3 mundos) y
+`node pruebas/rutas_dificiles.js` (laberinto, pared puesta a mitad de camino, escaleras y 25 criaturas con su IA durante 90 s).
