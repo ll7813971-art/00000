@@ -22,7 +22,7 @@ SPEED = 311.58                       # unidades/segundo a velocidad 1x
 DURACION = 7 * 60                    # segundos
 TOTAL_COLS = round(DURACION * SPEED / CELL)
 
-ID_BLOQUE, ID_PINCHO, ID_ORBE = 1, 8, 36
+ID_BLOQUE, ID_PINCHO, ID_ORBE, ID_LOSA = 1, 8, 36, 40
 ID_GRAV_NORMAL, ID_GRAV_INVERTIDA = 10, 11
 ID_CUBO, ID_NAVE, ID_BOLA, ID_UFO = 12, 13, 47, 111
 ID_COLOR = 899
@@ -33,6 +33,7 @@ CH_FONDO, CH_SUELO, CH_LINEA, CH_SUELO2 = 1000, 1001, 1002, 1009
 class Nivel:
     def __init__(self):
         self.bloques = set()          # (col, fila)
+        self.losas = set()            # medio bloque (peldaños de Stereo Madness), mitad de arriba
         self.pinchos = {}             # (col, fila) -> rotación
         self.orbes = set()
         self.portales = []            # (col, fila, id)
@@ -46,6 +47,7 @@ class Nivel:
 
     def fusionar(self, otro):
         self.bloques |= otro.bloques
+        self.losas |= otro.losas
         self.pinchos.update(otro.pinchos)
         self.orbes |= otro.orbes
         self.portales += otro.portales
@@ -70,7 +72,12 @@ class Sim:
         self.dt = 1 / 240
 
     def solido(self, c, r):
-        return (c, r) in self.lv.bloques
+        """Caja vertical (abajo, arriba) del sólido en la celda, o None."""
+        if (c, r) in self.lv.bloques:
+            return r * CELL, (r + 1) * CELL
+        if (c, r) in self.lv.losas:
+            return r * CELL + 15, (r + 1) * CELL
+        return None
 
     def choca_pincho(self, x, y):
         c0, c1 = int((x - 30) // CELL), int((x + 30) // CELL)
@@ -120,9 +127,12 @@ class Sim:
         r0, r1 = int((ny - 15) // CELL), int((ny + 15 - 1e-6) // CELL)
         for c in range(c0, c1 + 1):
             for r in range(r0, r1 + 1):
-                if not self.solido(c, r):
+                caja = self.solido(c, r)
+                if not caja:
                     continue
-                top, bot = (r + 1) * CELL, r * CELL
+                bot, top = caja
+                if ny + 15 <= bot or ny - 15 >= top:
+                    continue
                 if s > 0 and vy <= 0 and (y - 15) >= top - 4:
                     ny, vy, suelo = top + 15, 0, True
                 elif s < 0 and vy >= 0 and (y + 15) <= bot + 4:
@@ -134,7 +144,8 @@ class Sim:
         r0, r1 = int((ny - 15 + 0.01) // CELL), int((ny + 15 - 0.01) // CELL)
         for c in range(c0, c1 + 1):
             for r in range(r0, r1 + 1):
-                if self.solido(c, r):
+                caja = self.solido(c, r)
+                if caja and ny + 15 - 0.01 > caja[0] and ny - 15 + 0.01 < caja[1]:
                     return None
         if self.choca_pincho(nx, ny):
             return None
@@ -147,8 +158,9 @@ class Sim:
         c0, c1 = int((x - 15) // CELL), int((x + 15 - 1e-6) // CELL)
         borde = (y - 15) if s > 0 else (y + 15)
         for c in range(c0, c1 + 1):
-            if self.solido(c, int(fila)):
-                cara = (fila + 1) * CELL if s > 0 else fila * CELL
+            caja = self.solido(c, int(fila))
+            if caja:
+                cara = caja[1] if s > 0 else caja[0]
                 if abs(cara - borde) < 0.5:
                     return True
         return False
@@ -219,6 +231,7 @@ class Terreno:
     def __init__(self, lv, col, espejo=False):
         self.lv, self.col, self.h, self.espejo = lv, col, 0, espejo
         self.alturas = {}
+        self.sup = {}                 # altura de la superficie más alta pisable
 
     def fila(self, r):
         return 4 - r if self.espejo else r
@@ -227,9 +240,12 @@ class Terreno:
         """Centro del jugador apoyado sobre el terreno actual."""
         return 30 * (5 - self.h) - 15 if self.espejo else 30 * self.h + 15
 
-    def columna(self, h=None, pincho=False, pozo=False, orbe=None):
+    def columna(self, h=None, pincho=False, pozo=False, orbe=None, losa=None):
         h = self.h if h is None else h
         self.alturas[self.col] = h
+        self.sup[self.col] = h if losa is None else max(h, losa + 1)
+        if losa is not None:
+            self.lv.losas.add((self.col, losa))
         for r in range(h):
             self.lv.bloques.add((self.col, self.fila(r)))
         if self.espejo:
@@ -379,6 +395,24 @@ def trozo_cubo(t, rng, tipo, hmax):
             t.columna(pincho=True)
         t.plano(2)
         firma += [l1, l2, pincho]
+    elif tipo == 'peldanos' and not t.espejo:
+        # peldaños flotantes de medio bloque sobre pinchos, como en Stereo Madness
+        n = rng.randint(2, 3)
+        t.plano(2)
+        r = h
+        for i in range(n):
+            w = rng.randint(2, 3)
+            for _ in range(w):
+                t.columna(losa=r, pincho=r > h)
+            firma += [w]
+            if i < n - 1:
+                t.columna(pincho=True)
+                r += 1
+        caida = rng.randint(0, 1)
+        for _ in range(caida):
+            t.columna(pincho=True)
+        t.plano(3)
+        firma += [caida]
     elif tipo == 'pincho_bloque' and h == 0:
         # bloque bajo seguido de pinchos
         t.plano(2)
@@ -398,50 +432,79 @@ def trozo_cubo(t, rng, tipo, hmax):
     return tuple(firma)
 
 
-def decorar(s, ini, fin, alturas, rng, espejo):
-    """Decoración estilo 1.0 fuera del alcance del jugador (techos con almenas,
-    dientes colgantes, suelo dentado en la parte invertida)."""
-    c = ini + 8
-    while c < fin - 8:
-        largo = rng.randint(10, 22)
-        estilo = rng.choice(['almenas', 'arco', 'liso', 'dientes', 'escalones'])
-        for i in range(largo):
-            cc = c + i
-            if cc >= fin - 8:
-                break
-            vent = [alturas.get(k, 0) for k in range(cc - 6, cc + 7)]
-            H = max(vent)
-            if espejo:
-                # suelo decorado debajo del cubo invertido
-                if H == 0:
-                    if estilo in ('dientes', 'liso') and i % 2 == 0:
+def decorar(s, ini, fin, t, rng, espejo):
+    """Decoración estilo 1.0 a la vista del jugador: techos con almenas, arcos y
+    dientes colgantes justo por encima del salto, y suelo dentado en la parte
+    invertida. Cada trozo se comprueba con el simulador; si molesta, se sube."""
+    if espejo:
+        c = ini + 8
+        while c < fin - 8:
+            largo = rng.randint(10, 22)
+            estilo = rng.choice(['dientes', 'liso', 'macizo'])
+            for i in range(largo):
+                cc = c + i
+                if cc >= fin - 8:
+                    break
+                if max(t.alturas.get(k, 0) for k in range(cc - 6, cc + 7)) == 0:
+                    if estilo != 'macizo' and i % 2 == 0:
                         s.pinchos[(cc, 0)] = 0
                     else:
                         s.bloques.add((cc, 0))
-                continue
+            c += largo + rng.randint(4, 10)
+        for cc in range(ini, fin):
+            if (cc, 5) in s.bloques:
+                s.bloques.add((cc, 6))
+                s.bloques.add((cc, 7))
+        return
+
+    def hacer(c, largo, estilo, extra):
+        bl, pi = set(), {}
+        for i in range(largo):
+            cc = c + i
+            H = max(t.sup.get(k, 0) for k in range(cc - 3, cc + 4))
             for oc, orow in s.orbes:
-                if abs(oc - cc) <= 7:
-                    H = max(H, orow + 1)
-            base = max(H + 6, 7)
+                if abs(oc - cc) <= 5:
+                    H = max(H, orow + 2)
+            con_pincho = (estilo == 'dientes' and i % 2 == 1) or \
+                         (estilo == 'liso' and i % 3 == 1)
+            base = H + 4 + extra + (1 if estilo in ('dientes', 'liso') else 0)
             if estilo == 'almenas':
                 base += (i // 2) % 2
             elif estilo == 'arco':
                 base += int(abs(i - (largo - 1) / 2) > largo / 4)
             elif estilo == 'escalones':
-                base += min(i, largo - 1 - i, 2) * -1 + 2
+                base += 2 - min(i, largo - 1 - i, 2)
             if i in (0, largo - 1):
                 base += 1
+                con_pincho = False
             for r in range(base, 13):
-                s.bloques.add((cc, r))
-            if (estilo == 'dientes' and i % 2 == 1) or (estilo == 'liso' and i % 4 == 2):
-                if 0 < i < largo - 1 and base - 1 >= H + 5:
-                    s.pinchos[(cc, base - 1)] = 180
-        c += largo + rng.randint(4, 10)
-    if espejo:
-        for cc in range(ini, fin):
-            if (cc, 5) in s.bloques:
-                s.bloques.add((cc, 6))
-                s.bloques.add((cc, 7))
+                bl.add((cc, r))
+            if con_pincho:
+                pi[(cc, base - 1)] = 180
+        return bl, pi
+
+    c = ini + 8
+    while c < fin - 12:
+        largo = rng.randint(8, 18)
+        largo = min(largo, fin - 10 - c)
+        estilo = rng.choice(['almenas', 'arco', 'liso', 'dientes', 'escalones'])
+        # punto de partida en suelo firme unas columnas antes
+        c0 = next((k for k in range(c - 7, c - 2)
+                   if t.sup.get(k) == t.alturas.get(k) and (k, t.alturas.get(k, 0)) not in s.pinchos
+                   and t.sup.get(k + 1) == t.sup.get(k)), None)
+        if c0 is not None:
+            for extra in range(3):
+                bl, pi = hacer(c, largo, estilo, extra)
+                if any(p in s.bloques or p in s.pinchos for p in list(bl) + list(pi)):
+                    continue
+                s.bloques |= bl
+                s.pinchos.update(pi)
+                if comprobar(s, c0, min(c + largo + 6, fin), 'cubo', 30 * t.sup[c0] + 15):
+                    break
+                s.bloques -= bl
+                for p in pi:
+                    del s.pinchos[p]
+        c += largo + rng.randint(3, 8)
 
 
 def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
@@ -457,18 +520,18 @@ def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
         firmas_local = []
         fallos = 0
         while t.col < col + largo - 16 and fallos < 400:
-            antes = (t.col, t.h, dict(t.alturas))
+            antes = (t.col, t.h, dict(t.alturas), dict(t.sup))
             y0 = t.y_jugador()
             tipo = rng.choice(tipos)
-            copia = (set(s.bloques), dict(s.pinchos), set(s.orbes))
+            copia = (set(s.bloques), dict(s.pinchos), set(s.orbes), set(s.losas))
             f = trozo_cubo(t, rng, tipo, hmax)
             ok = f is not None and f not in lv.firmas and f not in firmas_local
             if ok:
                 # el fragmento se comprueba en cuanto se coloca
                 ok = comprobar(s, antes[0], t.col, 'cubo', y0, -1 if espejo else 1)
             if not ok:
-                s.bloques, s.pinchos, s.orbes = copia
-                t.col, t.h, t.alturas = antes
+                s.bloques, s.pinchos, s.orbes, s.losas = copia
+                t.col, t.h, t.alturas, t.sup = antes
                 fallos += 1
                 continue
             firmas_local.append(f)
@@ -482,7 +545,7 @@ def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
             t.espejo = False
         while t.col < col + largo:
             t.columna()
-        decorar(s, col, col + largo, t.alturas, rng, espejo)
+        decorar(s, col, col + largo, t, rng, espejo)
         if comprobar(s, col, col + largo):
             lv.firmas.update(firmas_local)
             lv.fusionar(s)
@@ -723,15 +786,15 @@ def construir(semilla=2209):
     rng = random.Random(semilla)
     lv = Nivel()
     secciones = [
-        ('cubo', 230, dict(tipos=['pincho', 'bloque', 'subir', 'bajar', 'ritmo'], hmax=1)),
-        ('cubo', 280, dict(tipos=['escalera', 'subir', 'bajar', 'pincho', 'meseta',
+        ('cubo', 230, dict(tipos=['peldanos', 'peldanos', 'pincho', 'bloque', 'subir', 'bajar', 'ritmo'], hmax=1)),
+        ('cubo', 280, dict(tipos=['peldanos', 'peldanos', 'escalera', 'subir', 'bajar', 'pincho', 'meseta',
                                   'plataformas'], hmax=3)),
         ('nave', 300, dict(modo='nave', hueco_min=5, cambio_cada=3, pinchos=0.08,
                            onda='libre', islas=0.25)),
-        ('cubo', 270, dict(tipos=['orbe', 'orbe_doble', 'pincho', 'bloque', 'pincho_bloque',
+        ('cubo', 270, dict(tipos=['peldanos', 'peldanos', 'orbe', 'orbe_doble', 'pincho', 'bloque', 'pincho_bloque',
                                   'ritmo'], hmax=1)),
         ('bola', 260, dict(max_desnivel=1)),
-        ('cubo', 290, dict(tipos=['subir', 'pozo', 'pilares', 'bajar', 'escalera',
+        ('cubo', 290, dict(tipos=['peldanos', 'peldanos', 'subir', 'pozo', 'pilares', 'bajar', 'escalera',
                                   'plataformas'], hmax=3)),
         ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=4, pinchos=0.1,
                           onda='libre', islas=0.2)),
@@ -739,22 +802,22 @@ def construir(semilla=2209):
                                     'plataformas'], hmax=1)),
         ('nave', 300, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=0.2,
                            onda='zigzag', islas=0.3)),
-        ('cubo', 280, dict(tipos=['meseta', 'pincho_bloque', 'pozo', 'subir', 'bajar',
+        ('cubo', 280, dict(tipos=['peldanos', 'peldanos', 'meseta', 'pincho_bloque', 'pozo', 'subir', 'bajar',
                                   'pincho', 'plataformas', 'orbe'], hmax=2)),
         ('bola', 250, dict(max_desnivel=2)),
         ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=3, pinchos=0.18,
                           onda='zigzag', islas=0.3)),
-        ('cubo', 280, dict(tipos=['orbe', 'orbe_doble', 'escalera', 'pilares', 'bajar',
+        ('cubo', 280, dict(tipos=['peldanos', 'peldanos', 'orbe', 'orbe_doble', 'escalera', 'pilares', 'bajar',
                                   'pozo', 'ritmo'], hmax=3)),
         ('nave', 280, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=0.22,
                            onda='libre', islas=0.4)),
-        ('cubo', 300, dict(tipos=['pincho', 'meseta', 'orbe', 'orbe_doble', 'pilares',
+        ('cubo', 300, dict(tipos=['peldanos', 'peldanos', 'pincho', 'meseta', 'orbe', 'orbe_doble', 'pilares',
                                   'subir', 'bajar', 'pincho_bloque', 'escalera',
                                   'plataformas', 'ritmo'], hmax=2)),
     ]
     usado = sum(l for _, l, _ in secciones)
     secciones.append(('cubo', TOTAL_COLS - usado,
-                      dict(tipos=['bloque', 'pincho', 'subir', 'bajar', 'orbe'], hmax=1)))
+                      dict(tipos=['peldanos', 'bloque', 'pincho', 'subir', 'bajar', 'orbe'], hmax=1)))
 
     col = 0
     for i, (tipo, largo, kw) in enumerate(secciones):
@@ -798,6 +861,9 @@ def cadena_nivel(lv):
         objs.append(f'1,{ID_BLOQUE},{pos(c, r)}')
     for (c, r), rot in sorted(lv.pinchos.items()):
         objs.append(f'1,{ID_PINCHO},{pos(c, r)}' + (f',6,{rot}' if rot else ''))
+    for (c, r) in sorted(lv.losas):
+        # el sprite va centrado en su posición: y + 7.5 lo deja en la mitad de arriba
+        objs.append(f'1,{ID_LOSA},2,{c * CELL + 15:g},3,{r * CELL + 22.5:g}')
     for (c, r) in sorted(lv.orbes):
         objs.append(f'1,{ID_ORBE},{pos(c, r)}')
     for c, r, pid in sorted(lv.portales):

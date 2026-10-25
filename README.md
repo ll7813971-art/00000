@@ -36,8 +36,10 @@ Importar: con el mod **GDShare** (Geode) en el editor → *Import* → elige el 
 
 ## Detalles y decoración
 
-- Techos colgantes estilo 1.0 sobre las partes de cubo: almenas, arcos, escalones y
-  filas de pinchos colgando (siempre fuera del alcance del salto).
+- Peldaños de medio bloque flotando sobre pinchos, como los de Stereo Madness (objeto 40).
+- Techos colgantes estilo 1.0 sobre las partes de cubo (almenas, arcos, escalones y filas de
+  pinchos colgando), a solo 4–5 bloques sobre el suelo para que se vean en pantalla. Cada
+  techo se prueba con el simulador y, si estorba al salto, se sube un bloque.
 - En el cubo invertido, techo grueso y suelo dentado de bloques y pinchos.
 - Islas de bloques (a veces con pinchos) dentro de los túneles de nave y UFO.
 - Dos cambios de color por sección: al entrar y otro a mitad (fondo más oscuro y suelo más
