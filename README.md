@@ -80,7 +80,8 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
     encima de ella y la masa baja por debajo para no taparla) y sale el botón
     **LANZAR** (en PC también la tecla **E**). Se lanza hacia donde miras (el ratón o el joystick). Si toca
     una célula de otro jugador, esa célula recibe un **aura roja y una cuenta atrás de 3 s** encima y, al
-    llegar a cero, una explosión (bola de fuego, onda, temblor de pantalla y sonido) la **revienta en mini
+    llegar a cero, una explosión (bola de fuego, onda, temblor de pantalla y sonido; la animación, las partículas y el
+    temblor solo ocurren si la explosión se ve en tu pantalla, para no dar lag) la **revienta en mini
     células** (si ya tiene 16 piezas, suelta masa en bolitas). Solo tiene un uso: si no da a nadie, se
     apaga. Solo se lleva una a la vez. Los bots también las cogen y las lanzan a los rivales grandes.
   - **Ácido 🧪:** funciona como la bomba (se lleva en el centro de tu célula, botón **LANZAR** verde o tecla

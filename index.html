@@ -1614,10 +1614,15 @@ function throwBomb(p, ax, ay) {
 function explodeCell(c) {
   const p = c.owner;
   c.bombAt = 0;
-  booms.push({ x: c.x, y: c.y, t0: now, r: Math.max(60, c.r) });
-  burst(c.x, c.y, '#f97316', 26, c.r * 0.4); burst(c.x, c.y, '#ef4444', 18, c.r * 0.3); burst(c.x, c.y, '#fde047', 10, c.r * 0.2);
-  const near = human.alive && Math.hypot(c.x - cam.x, c.y - cam.y) < (vw + vh) / cam.s;
-  if (p === human || c.bombBy === human || near) { Sound.boom(); shakeT = 0.45; shakeA = Math.min(26, 8 + c.r * 0.05); }
+  // Solo las explosiones que se ven en pantalla tienen animación, partículas y temblor (las de fuera de la
+  // vista no hacen nada que cueste: con muchos bots lanzando bombas eso daba tirones)
+  const seen = inView(c.x, c.y, Math.max(60, c.r) * 2.6);
+  if (seen) {
+    booms.push({ x: c.x, y: c.y, t0: now, r: Math.max(60, c.r) });
+    burst(c.x, c.y, '#f97316', 26, c.r * 0.4); burst(c.x, c.y, '#ef4444', 18, c.r * 0.3); burst(c.x, c.y, '#fde047', 10, c.r * 0.2);
+    shakeT = 0.45; shakeA = Math.min(26, 8 + c.r * 0.05);
+  }
+  if (seen || p === human || c.bombBy === human) Sound.boom();
   if (p === human) { vibrate([60, 40, 90]); addFloat(c.x, c.y - c.r - 30, '💥 ¡BOOM!'); }
   let alive = 0;
   for (const o of p.cells) if (!o.dead) alive++;
@@ -3251,6 +3256,8 @@ function render() {
 
   // anillos al coger un poder o al recibir una bomba
   for (const sh of shocks) {
+    const sR = sh.r * 1.8;
+    if (sh.x + sR < L || sh.x - sR > R || sh.y + sR < T || sh.y - sR > B) continue;   // fuera de la vista
     const k = (now - sh.t0) / 0.6;
     ctx.globalAlpha = 1 - k;
     ctx.lineWidth = (8 - k * 6) / s + 4;
@@ -3295,6 +3302,7 @@ function render() {
   // explosiones: bola de fuego que crece, destello y onda
   for (const bm of booms) {
     const k = (now - bm.t0) / 0.7, R0 = bm.r * (0.6 + k * 1.9);
+    if (bm.x + R0 < L || bm.x - R0 > R || bm.y + R0 < T || bm.y - R0 > B) continue;   // fuera de la vista
     const g = ctx.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, R0);
     g.addColorStop(0, `rgba(255,250,220,${0.95 * (1 - k)})`); g.addColorStop(0.35, `rgba(253,186,116,${0.85 * (1 - k)})`);
     g.addColorStop(0.7, `rgba(239,68,68,${0.55 * (1 - k)})`); g.addColorStop(1, 'rgba(127,29,29,0)');
@@ -4464,6 +4472,7 @@ window.AgarNova = {
   get state() { return state; }, players, human, stats, viruses, pellets, powers, thrown, dbg, settings, BOLT_TIME, BOLT_SPEED, throwBomb, Sound,
   get now() { return now; },
   get ejected() { return ejected.length; },
+  get shake() { return shakeT; }, get boomFx() { return booms.length; },
   get world() { return WORLD; },
   think: botThink, SMART,
   spawnCell(p, x, y, mass) { const c = new Cell(p, x, y, mass); p.cells.push(c); p.alive = true; return c; },
