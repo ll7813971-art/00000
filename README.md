@@ -13,49 +13,51 @@ bloques con contorno, pinchos y colores vivos que cambian en cada sección.
 
 Importar: con el mod **GDShare** (Geode) en el editor → *Import* → elige el archivo.
 
-## Recorrido (16 secciones, cada una con su color de fondo y suelo)
+## Recorrido (16 secciones: cada una con su tema, velocidad, decoración y colores)
 
-| Tiempo | Sección |
-|--------|---------|
-| 0:00 | Cubo: introducción tranquila (azul clásico) |
-| 0:22 | Cubo: escaleras y mesetas (rosa) |
-| 0:49 | Nave: cueva amplia (morado) |
-| 1:18 | Cubo: orbes amarillos sobre pozos (verde) |
-| 1:44 | Bola: pasillo con desniveles (naranja) |
-| 2:09 | Cubo: pilares y pozos tipo castillo (celeste) |
-| 2:37 | UFO: túnel ondulado (rojo) |
-| 3:02 | Cubo con gravedad invertida (azul noche) |
-| 3:27 | Nave: zigzag con pinchos (violeta) |
-| 3:56 | Cubo: mezcla de mesetas y pozos (turquesa) |
-| 4:23 | Bola: desniveles dobles (amarillo) |
-| 4:47 | UFO: zigzag con pinchos (lima) |
-| 5:12 | Cubo: torres y orbes (fresa) |
-| 5:39 | Nave: tramo final estrecho (azul intenso) |
-| 6:06 | Cubo: gran final (azul + rosa) |
-| 6:35 | Cubo: despedida tranquila y fundido a oscuro |
+| Tiempo | Velocidad | Sección |
+|--------|-----------|---------|
+| 0:00 | 1x   | Cubo: homenaje a Stereo Madness, peldaños de medio bloque (techo con almenas) |
+| 0:23 | 1x   | Cubo: escaleras y mesetas (techo escalonado) |
+| 0:50 | 1x   | Nave: cueva amplia |
+| 1:18 | 2x   | Cubo: carrera rápida de pinchos y bloques (techo con dientes) |
+| 1:44 | 1x   | Bola: pasillo con desniveles |
+| 2:10 | 0.5x | Cubo: castillo lento de pilares, pozos y plataformas (techo de arcos) |
+| 2:39 | 1x   | UFO: túnel ondulado |
+| 3:05 | 1x   | Cubo con gravedad invertida |
+| 3:30 | 2x   | Nave: zigzag rápido |
+| 3:56 | 1x   | Cubo: trampolines amarillos (techo liso con pinchos) |
+| 4:23 | 1x   | Bola: desniveles dobles |
+| 4:47 | 1x   | UFO: zigzag con islas y pinchos |
+| 5:12 | 1x   | Cubo: orbes amarillos sobre pozos |
+| 5:38 | 1x   | Nave: tramo estrecho con islas |
+| 6:04 | 2x   | Cubo: gran final rápido con todo mezclado |
+| 6:33 | 0.5x | Cubo: despedida tranquila y fundido a oscuro |
 
-## Monedas secretas (3)
+## Monedas estrella (3)
+
+Son las monedas doradas de los niveles oficiales (objeto 142), no las monedas de usuario.
 
 | Tiempo | Dónde |
 |--------|-------|
-| ~0:44 | Flotando sobre una torre de la sección de escaleras (rosa): salta en el momento justo. |
-| ~2:18 | Sobre los pilares de la sección tipo castillo (celeste). |
-| ~6:23 | En el gran final, encima de los orbes amarillos: hay que usar los orbes para llegar. |
+| ~0:30 | Flotando sobre las escaleras (rosa): salta desde lo alto en el momento justo. |
+| ~2:34 | Sobre los pilares del castillo lento (celeste). |
+| ~6:25 | En el gran final rápido, en lo alto de una torre. |
 
 El simulador comprueba que cada moneda se puede coger sin morir y terminar la sección.
 
 ## Objetos de la 1.0 que usa
 
-Bloque (1), pincho (8), pinchos de suelo de los pozos (9), pincho pequeño (39), medio bloque /
-peldaño (40), trampolín amarillo (35), orbe amarillo (36), portales de cubo, nave y gravedad,
+Bloque (1), pincho (8), pinchos de suelo de los pozos (9), medio bloque / peldaño (40),
+trampolín amarillo (35), orbe amarillo (36), portales de cubo, nave, gravedad y velocidad,
 y colores de fondo y suelo. Todos van en el centro de su casilla, igual que los coloca el
-editor (el propio juego dibuja el peldaño arriba y los pinchos pequeños y el trampolín abajo).
+editor (el propio juego dibuja el peldaño arriba y los pinchos de suelo y el trampolín abajo).
 
 ## Detalles y decoración
 
 - Peldaños de medio bloque flotando sobre pinchos, como los de Stereo Madness (objeto 40).
 - Trampolines amarillos que lanzan a torres de 3 bloques o por encima de pozos largos.
-- Filas de pinchos pequeños y pozos con los pinchos de suelo clásicos.
+- Pozos con los pinchos de suelo clásicos.
 - Techos colgantes estilo 1.0 sobre las partes de cubo (almenas, arcos, escalones y filas de
   pinchos colgando), a solo 4–5 bloques sobre el suelo para que se vean en pantalla. Cada
   techo se prueba con el simulador y, si estorba al salto, se sube un bloque.
