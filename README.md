@@ -121,6 +121,12 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
   espectador) no se acumulan más de 2 pasos por fotograma y el fondo del menú se pinta a la mitad en móviles
   lentos. En un móvil simulado 4 veces más lento: menú de Ultra de ~5 a ~33 FPS, espectador en Normal ~44 FPS.
 - **Virus en Ultra:** cuando faltan muchos reaparecen más deprisa (antes el mapa se iba quedando sin virus).
+- **Bots que esquivan los virus:** un bot que puede explotar con un virus mira hacia delante por el camino que
+  va a seguir (el de cada una de sus piezas grandes) y, si chocaría con uno, prueba rumbos girados poco a poco
+  hasta encontrar uno libre (búsqueda de camino local). Tampoco se divide si la pieza que sale atravesaría un
+  virus. Y como red de seguridad, una célula de bot no entra en un virus quieto: lo rodea deslizándose por su
+  borde (un virus disparado sí la revienta). Explosiones de bots con virus: Normal de ~14 a ~2 por minuto,
+  Ultra de ~195 a ~38 (las que quedan son sobre todo virus disparados y piezas que salen despedidas).
 - **Volumen x3:** el volumen general es el triple que antes, con un limitador para que no distorsione.
 - **Bots con número:** en vez de nombre, cada bot se llama por su número (#1, #2… #200) y lo conserva al
   reaparecer.

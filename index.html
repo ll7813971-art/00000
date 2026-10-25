@@ -1463,6 +1463,8 @@ const booms = [];          // explosiones (animación)
 let powerSlots = 8, nextPowerRoll = 0;
 let shakeT = 0, shakeA = 0; // temblor de cámara
 let cellGrid = new Grid(300);
+let virusGrid = new Grid(600);   // virus por zonas (para que los bots no se metan en ellos)
+const vBuf = [];
 let ejGrid = new Grid(300);
 const qBufA = [], qBufB = [], qBufC = [], eatenBuf = [], botCT = [];
 let botStamp = 0;
@@ -1875,7 +1877,7 @@ function initWorld(key, fresh) {
   const D = DIFFS[key];
   WORLD = D.world; PELLETS = D.pellets; VIRUS_MIN = D.virusMin; VIRUS_MAX = D.virusMax;
   PGN = Math.ceil(WORLD / PG);
-  cellGrid = new Grid(300); ejGrid = new Grid(300);
+  cellGrid = new Grid(300); ejGrid = new Grid(300); virusGrid = new Grid(600);
   botSpriteSize = D.bots > 100 ? 144 : 192;
   players.length = 0; allCells.length = 0;
   ejected.length = 0; viruses.length = 0;
@@ -2139,6 +2141,54 @@ function scanEscape(big, list, caution, awayX, awayY) {
   return [bx, by];
 }
 
+// --- Esquivar virus (lo que hace explotar a una célula grande) ---
+// Mira hacia delante por el rumbo que quiere seguir: si alguna de sus células capaces de explotar pasaría por
+// encima de un virus, prueba rumbos girados poco a poco (primero hacia el lado contrario del virus) hasta
+// encontrar uno libre. Es una búsqueda de camino local y barata: solo mira los virus cercanos.
+const nearV = [], popC = [];
+const AVOID_STEPS = [0.26, 0.52, 0.79, 1.05, 1.31, 1.57, 2.1];
+function popsOnPath(ox, oy, gx, gy, look) {
+  // cada pieza va hacia el punto objetivo (gx, gy) desde donde está: se comprueba SU camino
+  for (let i = 0; i < popC.length; i++) {
+    const c = popC[i];
+    let ux = gx - c.x, uy = gy - c.y; const dl = Math.hypot(ux, uy) || 1; ux /= dl; uy /= dl;
+    for (let k = 0; k < nearV.length; k++) {
+      const v = nearV[k];
+      if (c.mass < v.m * 1.33) continue;
+      const vx = v.x - c.x, vy = v.y - c.y, along = vx * ux + vy * uy;
+      if (along < -v.r * 0.5 || along > look + c.r) continue;             // solo lo que está delante
+      if (Math.abs(vx * uy - vy * ux) < c.r - v.r * EAT_COVER + 35 + v.r * 0.35) return v;
+    }
+  }
+  return null;
+}
+function avoidViruses(b, big, ang) {
+  if (big.mass < VIRUS_MASS * 1.33) return ang;                          // pequeño: los virus no le hacen nada
+  const look = Math.min(1000, speedOf(big.mass) * 1.4 + big.r * 1.5), box = look + big.r * 2.5;
+  nearV.length = 0;
+  for (const v of viruses) if (Math.abs(v.x - big.x) < box && Math.abs(v.y - big.y) < box) nearV.push(v);
+  if (!nearV.length) return ang;
+  popC.length = 0;
+  for (const c of b.cells) if (c.mass >= VIRUS_MASS * 1.33) popC.push(c);
+  if (popC.length > 6) { popC.sort((p, q) => q.mass - p.mass); popC.length = 6; }
+  // el objetivo real está a «reach» del centro del bot, igual que en botThink
+  let mx = 0, my = 0, tm = 0;
+  for (const c of b.cells) { mx += c.x * c.mass; my += c.y * c.mass; tm += c.mass; }
+  mx /= tm; my /= tm;
+  const reach = 500 + big.r * 2, ux = Math.cos(ang), uy = Math.sin(ang);
+  const v0 = popsOnPath(mx, my, mx + ux * reach, my + uy * reach, look);
+  if (!v0) return ang;
+  b.nextThink = Math.min(b.nextThink, now + 0.07);                       // con un virus delante, piensa más a menudo
+  const side = Math.sign((v0.x - big.x) * uy - (v0.y - big.y) * ux) || 1;   // girar alejándose del virus
+  for (const st of AVOID_STEPS) {
+    for (const sg of [side, -side]) {
+      const a = ang + st * sg;
+      if (!popsOnPath(mx, my, mx + Math.cos(a) * reach, my + Math.sin(a) * reach, look)) return a;
+    }
+  }
+  return ang;
+}
+
 function botThink(b) {
   const cells = b.cells, n = cells.length;
   const smart = b.iq >= 2;                // modo Ultra
@@ -2317,7 +2367,8 @@ function botThink(b) {
   }
 
   b.urgent = threat > 0.35;               // si hay peligro cerca, giran más deprisa
-  const ang = Math.atan2(fy, fx) + (Math.random() - 0.5) * (1 - b.skill) * 0.6;
+  // rumbo deseado y, si por ese camino alguna de sus células grandes chocaría con un virus, lo rodea
+  const ang = avoidViruses(b, big, Math.atan2(fy, fx) + (Math.random() - 0.5) * (1 - b.skill) * 0.6);
   const reach = 500 + big.r * 2;
   b.tx = mx + Math.cos(ang) * reach;
   b.ty = my + Math.sin(ang) * reach;
@@ -2338,6 +2389,16 @@ function botThink(b) {
         for (const e of qBufA) {
           if (e === prey || e.owner === b || e.dead) continue;
           if (e.mass > half * EAT_RATIO && Math.hypot(e.x - big.x, e.y - big.y) < e.r + reachS + 200) { risky = true; break; }
+        }
+        // no se divide si la pieza que sale atravesaría un virus por el camino (explotaría)
+        if (!risky && half >= VIRUS_MASS * 1.33) {
+          const ux = dx / (d || 1), uy = dy / (d || 1);
+          for (const v of viruses) {
+            if (half < v.m * 1.33) continue;
+            const vx = v.x - big.x, vy = v.y - big.y, along = vx * ux + vy * uy;
+            if (along < 0 || along > reachS + hr) continue;
+            if (Math.abs(vx * uy - vy * ux) < hr + v.r * 0.5 + 30) { risky = true; break; }
+          }
         }
         if (!risky || b.aggr > 1.2) {
           const lead = 0.25 + d / 3000;
@@ -2510,6 +2571,35 @@ function moveCells(p, dt) {
       }
     }
   }
+  // Bots: una célula que explotaría con un virus quieto no entra en él; se desliza por su borde (vale también
+  // para las piezas que salen disparadas al dividirse). Un virus disparado sí puede reventarla.
+  if (p.isBot) {
+    for (let i = 0; i < n; i++) {
+      const c = cells[i];
+      if (c.mass < VIRUS_MASS * 1.33) continue;
+      virusGrid.query(c.x, c.y, c.r + 200, vBuf);
+      for (let k = 0; k < vBuf.length; k++) {
+        const v = vBuf[k];
+        if (v.dead || c.mass < v.m * 1.33 || v.vx * v.vx + v.vy * v.vy > 2500) continue;
+        let dx = c.x - v.x, dy = c.y - v.y, d = Math.sqrt(dx * dx + dy * dy);
+        const lim = c.r - v.r * EAT_COVER + 28;
+        if (d >= lim) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }
+        const nx = dx / d, ny = dy / d;
+        // lo que avanzó este paso hacia el virus se convierte en avance por su borde (lo rodea en vez de
+        // quedarse parado empujando), hacia el lado que le acerca a su objetivo
+        const mvx = c.x - c.px, mvy = c.y - c.py, inward = -(mvx * nx + mvy * ny);
+        c.x = v.x + nx * lim; c.y = v.y + ny * lim;
+        if (inward > 0) {
+          let tx = -ny, ty = nx;
+          const gx = p.tx - c.x, gy = p.ty - c.y, side = gx * tx + gy * ty;
+          if (side < 0 || (Math.abs(side) < 1 && p.id % 2)) { tx = -tx; ty = -ty; }
+          c.x += tx * inward; c.y += ty * inward;
+        }
+        const vin = c.vx * nx + c.vy * ny; if (vin < 0) { c.vx -= vin * nx; c.vy -= vin * ny; }   // sin empuje hacia el virus
+      }
+    }
+  }
   // congeladas: no se mueven nada (ni por empujes de sus piezas)
   for (let i = 0; i < n; i++) { const c = cells[i]; if (c.iceUntil > now) { c.x = c.px; c.y = c.py; c.vx = c.vy = 0; } }
   const idt = 1 / dt;
@@ -2646,6 +2736,7 @@ function update(dt) {
   if (human.alive) humanActions();
 
   rebuildCells();
+  virusGrid.clear(); for (const v of viruses) virusGrid.add(v);
   for (const p of players) if (p.alive) moveCells(p, dt);
   moveFree(ejected, dt, 4);
   moveFree(viruses, dt, 3);
