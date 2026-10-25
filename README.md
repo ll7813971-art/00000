@@ -34,13 +34,25 @@ Importar: con el mod **GDShare** (Geode) en el editor → *Import* → elige el 
 | 6:06 | Cubo: gran final (azul + rosa) |
 | 6:35 | Cubo: despedida tranquila y fundido a oscuro |
 
+## Detalles y decoración
+
+- Techos colgantes estilo 1.0 sobre las partes de cubo: almenas, arcos, escalones y
+  filas de pinchos colgando (siempre fuera del alcance del salto).
+- En el cubo invertido, techo grueso y suelo dentado de bloques y pinchos.
+- Islas de bloques (a veces con pinchos) dentro de los túneles de nave y UFO.
+- Dos cambios de color por sección: al entrar y otro a mitad (fondo más oscuro y suelo más
+  claro); al final el nivel se funde a oscuro.
+- Obstáculos casi seguidos: ritmos de pinchos, plataformas a distintas alturas, pilares,
+  orbes dobles sobre pozos largos, mesetas con pinchos y pasillos de bola con pinchos dobles.
+
 ## Jugabilidad
 
 - Ningún fragmento se repite: cada trozo se registra y, si ya existía, se genera otro.
 - Las secciones de cubo y bola se comprueban con un simulador de física (240 fps, con dos
-  juegos de parámetros de salto y hitboxes de pinchos agrandadas para dejar margen).
-  Si una sección no se puede pasar, se vuelve a generar.
-- Nave y UFO: huecos de 4–7 bloques que cambian como mucho 1 bloque por columna.
+  juegos de parámetros de salto y hitboxes de pinchos agrandadas para dejar margen): cada
+  fragmento se prueba al colocarlo y después la sección entera con la decoración puesta.
+  Si algo no se puede pasar, se cambia por otro fragmento.
+- Nave y UFO: siempre queda un camino continuo de al menos 3 bloques (nave) o 4 (UFO) de alto.
 - Las salidas de nave/UFO tienen dos portales de cubo apilados para no poder esquivarlos.
 
 ## Música

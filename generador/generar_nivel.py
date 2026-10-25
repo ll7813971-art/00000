@@ -153,10 +153,9 @@ class Sim:
                     return True
         return False
 
-    def jugable(self, col_ini, col_fin, modo_inicial='cubo'):
+    def jugable(self, col_ini, col_fin, modo_inicial='cubo', y0=15.0, s0=1):
         x = col_ini * CELL + 15
-        estados = {(round(15.0, 2), 0.0, 1, True, None, modo_inicial)}
-        reales = {(15.0, 0.0, 1, True, None, modo_inicial)}
+        reales = {(y0, 0.0, s0, True, None, modo_inicial)}
         portales = sorted((c * CELL + 15, pid) for c, _, pid in self.lv.portales
                           if col_ini <= c < col_fin)
         cuadro = 0
@@ -199,7 +198,7 @@ class Sim:
                 return False
             reales = list(nuevos.values())
             if len(reales) > 150:
-                reales.sort()
+                reales.sort(key=lambda e: (e[0], e[1]))
                 reales = reales[::len(reales) // 150 + 1]
             x += SPEED * self.dt
         return True
@@ -208,8 +207,8 @@ class Sim:
 PARAMETROS_FISICA = [(58, 0.37, 0.55), (70, 0.41, 0.75)]
 
 
-def comprobar(nivel_seccion, ini, fin, modo='cubo'):
-    return all(Sim(nivel_seccion, h, t, fb).jugable(ini, fin, modo)
+def comprobar(nivel_seccion, ini, fin, modo='cubo', y0=15.0, s0=1):
+    return all(Sim(nivel_seccion, h, t, fb).jugable(ini, fin, modo, y0, s0)
                for h, t, fb in PARAMETROS_FISICA)
 
 
@@ -219,12 +218,18 @@ class Terreno:
 
     def __init__(self, lv, col, espejo=False):
         self.lv, self.col, self.h, self.espejo = lv, col, 0, espejo
+        self.alturas = {}
 
     def fila(self, r):
         return 4 - r if self.espejo else r
 
+    def y_jugador(self):
+        """Centro del jugador apoyado sobre el terreno actual."""
+        return 30 * (5 - self.h) - 15 if self.espejo else 30 * self.h + 15
+
     def columna(self, h=None, pincho=False, pozo=False, orbe=None):
         h = self.h if h is None else h
+        self.alturas[self.col] = h
         for r in range(h):
             self.lv.bloques.add((self.col, self.fila(r)))
         if self.espejo:
@@ -243,67 +248,104 @@ class Terreno:
 
 
 def trozo_cubo(t, rng, tipo, hmax):
-    """Añade un fragmento jugable; devuelve su firma (para evitar repetición)."""
+    """Añade un fragmento; devuelve su firma (para evitar repetición) o None."""
     h, firma = t.h, [tipo, t.h]
     if tipo == 'pincho':
-        k = rng.choice([1, 1, 2])
-        pre, post = rng.randint(3, 5), rng.randint(4, 7)
+        k = rng.choice([1, 2, 2])
+        pre, post = rng.randint(2, 3), rng.randint(3, 4)
         t.plano(pre)
         for _ in range(k):
             t.columna(pincho=True)
         t.plano(post)
         firma += [k, pre, post]
+    elif tipo == 'ritmo':
+        # varios pinchos sueltos seguidos: salto, salto, salto
+        n = rng.randint(3, 4)
+        t.plano(2)
+        for _ in range(n):
+            t.columna(pincho=True)
+            sep = rng.randint(3, 5)
+            t.plano(sep)
+            firma.append(sep)
     elif tipo == 'subir' and h < hmax:
-        largo = rng.randint(4, 8)
         t.plano(2)
         t.h += 1
-        t.plano(largo)
-        firma += [largo]
+        a = rng.randint(2, 3)
+        t.plano(a)
+        pincho = rng.random() < 0.6
+        if pincho:
+            t.columna(pincho=True)
+        b = rng.randint(2, 4)
+        t.plano(b)
+        firma += [a, pincho, b]
     elif tipo == 'bajar' and h > 0:
         caida = rng.randint(1, h)
         t.h -= caida
-        largo = rng.randint(3, 6)
-        t.plano(largo)
-        firma += [caida, largo]
+        t.plano(2)
+        pincho = rng.random() < 0.5
+        if pincho:
+            t.columna(pincho=True)
+        t.plano(3)
+        firma += [caida, pincho]
     elif tipo == 'pozo' and h >= 1:
         ancho = rng.choice([1, 2, 2])
-        t.plano(2)
+        t.plano(1)
         for _ in range(ancho):
             t.columna(h=0, pozo=True)
-        largo = rng.randint(4, 7)
+        largo = rng.randint(3, 4)
         t.plano(largo)
         firma += [ancho, largo]
     elif tipo == 'bloque' and h == 0:
         ancho = rng.randint(1, 4)
-        t.plano(3)
+        t.plano(2)
         for _ in range(ancho):
             t.columna(h=1)
-        t.plano(rng.randint(4, 6))
-        firma += [ancho]
+        post = rng.randint(3, 4)
+        t.plano(post)
+        firma += [ancho, post]
     elif tipo == 'meseta' and h < hmax:
-        # sube, pincho sobre la meseta, baja
-        t.plano(3)
+        t.plano(2)
         t.h += 1
-        a, b = rng.randint(3, 5), rng.randint(3, 5)
+        a, b = rng.randint(2, 3), rng.randint(2, 3)
+        k = rng.choice([1, 2])
         t.plano(a)
-        t.columna(pincho=True)
+        for _ in range(k):
+            t.columna(pincho=True)
         t.plano(b)
         t.h -= 1
-        t.plano(4)
-        firma += [a, b]
-    elif tipo == 'pilares' and h >= 1:
-        n = rng.randint(2, 4)
         t.plano(2)
+        firma += [a, k, b]
+    elif tipo == 'pilares' and h >= 1:
+        n = rng.randint(3, 5)
+        t.plano(1)
         for i in range(n):
             ancho = rng.choice([1, 2, 2])
-            t.columna(h=0, pozo=True)
-            if ancho == 2:
+            for _ in range(ancho):
                 t.columna(h=0, pozo=True)
-            t.plano(rng.randint(2, 3))
-            firma += [ancho]
+            pil = rng.randint(2, 3)
+            t.plano(pil)
+            firma += [ancho, pil]
+        t.plano(1)
+    elif tipo == 'plataformas':
+        # bloques a distintas alturas separados por pozos con pinchos
+        n = rng.randint(3, 4)
+        t.plano(2)
+        base = h
+        for i in range(n):
+            alto = min(hmax, base + rng.choice([0, 1])) if i < n - 1 else base
+            alto = max(alto, 1) if hmax >= 1 else alto
+            gap = rng.choice([1, 2]) if alto <= t.h else 1
+            for _ in range(gap):
+                t.columna(h=0, pozo=True)
+            t.h = alto
+            ancho = rng.randint(2, 3)
+            t.plano(ancho)
+            firma += [alto, gap, ancho]
+        if t.h != base:
+            t.h = base
         t.plano(3)
     elif tipo == 'orbe':
-        pre = rng.randint(3, 4)
+        pre = rng.randint(2, 3)
         t.plano(pre)
         pos = rng.choice([1, 2])
         for i in range(5):
@@ -311,29 +353,95 @@ def trozo_cubo(t, rng, tipo, hmax):
                 t.columna(pincho=True, orbe=(2 + t.h) if i == pos else None)
             else:
                 t.columna(h=0, pozo=True, orbe=(2 + t.h) if i == pos else None)
-        t.plano(6)
+        t.plano(4)
         firma += [pre, pos]
+    elif tipo == 'orbe_doble':
+        t.plano(2)
+        a, b = 1, rng.choice([5, 6])
+        fb = rng.choice([2, 3])
+        for i in range(10):
+            orbe = (2 + t.h) if i == a else (fb + t.h) if i == b else None
+            if t.h == 0:
+                t.columna(pincho=True, orbe=orbe)
+            else:
+                t.columna(h=0, pozo=True, orbe=orbe)
+        t.plano(4)
+        firma += [b, fb]
     elif tipo == 'escalera' and h + 2 <= hmax:
-        l1, l2 = rng.randint(4, 5), rng.randint(4, 6)
+        l1, l2 = rng.randint(3, 4), rng.randint(2, 3)
         t.plano(2)
         t.h += 1
         t.plano(l1)
         t.h += 1
         t.plano(l2)
-        firma += [l1, l2]
+        pincho = rng.random() < 0.5
+        if pincho:
+            t.columna(pincho=True)
+        t.plano(2)
+        firma += [l1, l2, pincho]
     elif tipo == 'pincho_bloque' and h == 0:
-        # bloque bajo seguido de un pincho
+        # bloque bajo seguido de pinchos
+        t.plano(2)
+        ancho = rng.randint(1, 3)
+        for _ in range(ancho):
+            t.columna(h=1)
+        sep = rng.randint(2, 4)
+        t.plano(sep)
+        k = rng.choice([1, 2])
+        for _ in range(k):
+            t.columna(pincho=True)
         t.plano(3)
-        t.columna(h=1)
-        t.columna(h=1)
-        t.plano(rng.randint(3, 4))
-        t.columna(pincho=True)
-        t.plano(5)
-        firma += ['pb']
+        firma += [ancho, sep, k]
     else:
         return None
-    firma.append(t.col % 7)
+    firma.append(t.col % 5)
     return tuple(firma)
+
+
+def decorar(s, ini, fin, alturas, rng, espejo):
+    """Decoración estilo 1.0 fuera del alcance del jugador (techos con almenas,
+    dientes colgantes, suelo dentado en la parte invertida)."""
+    c = ini + 8
+    while c < fin - 8:
+        largo = rng.randint(10, 22)
+        estilo = rng.choice(['almenas', 'arco', 'liso', 'dientes', 'escalones'])
+        for i in range(largo):
+            cc = c + i
+            if cc >= fin - 8:
+                break
+            vent = [alturas.get(k, 0) for k in range(cc - 6, cc + 7)]
+            H = max(vent)
+            if espejo:
+                # suelo decorado debajo del cubo invertido
+                if H == 0:
+                    if estilo in ('dientes', 'liso') and i % 2 == 0:
+                        s.pinchos[(cc, 0)] = 0
+                    else:
+                        s.bloques.add((cc, 0))
+                continue
+            for oc, orow in s.orbes:
+                if abs(oc - cc) <= 7:
+                    H = max(H, orow + 1)
+            base = max(H + 6, 7)
+            if estilo == 'almenas':
+                base += (i // 2) % 2
+            elif estilo == 'arco':
+                base += int(abs(i - (largo - 1) / 2) > largo / 4)
+            elif estilo == 'escalones':
+                base += min(i, largo - 1 - i, 2) * -1 + 2
+            if i in (0, largo - 1):
+                base += 1
+            for r in range(base, 13):
+                s.bloques.add((cc, r))
+            if (estilo == 'dientes' and i % 2 == 1) or (estilo == 'liso' and i % 4 == 2):
+                if 0 < i < largo - 1 and base - 1 >= H + 5:
+                    s.pinchos[(cc, base - 1)] = 180
+        c += largo + rng.randint(4, 10)
+    if espejo:
+        for cc in range(ini, fin):
+            if (cc, 5) in s.bloques:
+                s.bloques.add((cc, 6))
+                s.bloques.add((cc, 7))
 
 
 def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
@@ -347,15 +455,21 @@ def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
         else:
             t.plano(14 if col == 0 else 6)       # inicio tranquilo
         firmas_local = []
-        while t.col < col + largo - 14:
-            antes = (t.col, t.h)
+        fallos = 0
+        while t.col < col + largo - 16 and fallos < 400:
+            antes = (t.col, t.h, dict(t.alturas))
+            y0 = t.y_jugador()
             tipo = rng.choice(tipos)
-            # guardamos el estado por si el fragmento ya existe
             copia = (set(s.bloques), dict(s.pinchos), set(s.orbes))
             f = trozo_cubo(t, rng, tipo, hmax)
-            if f is None or f in lv.firmas or f in firmas_local:
+            ok = f is not None and f not in lv.firmas and f not in firmas_local
+            if ok:
+                # el fragmento se comprueba en cuanto se coloca
+                ok = comprobar(s, antes[0], t.col, 'cubo', y0, -1 if espejo else 1)
+            if not ok:
                 s.bloques, s.pinchos, s.orbes = copia
-                t.col, t.h = antes
+                t.col, t.h, t.alturas = antes
+                fallos += 1
                 continue
             firmas_local.append(f)
         while t.h > 0:
@@ -368,6 +482,7 @@ def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
             t.espejo = False
         while t.col < col + largo:
             t.columna()
+        decorar(s, col, col + largo, t.alturas, rng, espejo)
         if comprobar(s, col, col + largo):
             lv.firmas.update(firmas_local)
             lv.fusionar(s)
@@ -376,8 +491,31 @@ def seccion_cubo(lv, col, largo, rng, tipos, hmax, espejo=False):
 
 
 # ----------------------------------------------------------- nave y UFO
-def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
+def camino_tunel(s, ini, fin, minimo, solape):
+    """¿Hay un camino continuo de al menos `minimo` bloques de alto?"""
+    previos = None
+    for c in range(ini, fin):
+        tramos, r0 = [], None
+        for r in range(11):
+            libre = r < 10 and (c, r) not in s.bloques and (c, r) not in s.pinchos
+            if libre and r0 is None:
+                r0 = r
+            elif not libre and r0 is not None:
+                if r - r0 >= minimo:
+                    tramos.append((r0, r - 1))
+                r0 = None
+        if previos is not None:
+            tramos = [t for t in tramos if any(
+                min(t[1], p[1]) - max(t[0], p[0]) + 1 >= solape for p in previos)]
+        if not tramos:
+            return False
+        previos = tramos
+    return True
+
+
+def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda, islas=0.0):
     pid = ID_NAVE if modo == 'nave' else ID_UFO
+    minimo, solape = (3, 2) if modo == 'nave' else (4, 3)
     s = lv.copia_vacia()
     s.portales.append((col + 1, 1, pid))
     suelo, techo = 0, 9
@@ -385,12 +523,12 @@ def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
     ultimo_cambio = col
     fin_tunel = col + largo - 12
     firma_trozo = []
+    paredes = {}
     c = col + 4
     while c < col + largo:
         if c < fin_tunel:
             if c - ultimo_cambio >= cambio_cada:
                 if suelo == objetivo_s and techo == objetivo_t:
-                    # nuevo objetivo para el hueco
                     hueco = rng.randint(hueco_min, hueco_min + 2)
                     base = rng.randint(0, 9 - hueco - 1) if onda == 'libre' else \
                         (0 if objetivo_s >= 3 else rng.randint(min(3, 9 - hueco), 9 - hueco))
@@ -398,7 +536,6 @@ def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
                     firma_trozo.append((base, hueco))
                 ms = (objetivo_s > suelo) - (objetivo_s < suelo)
                 mt = (objetivo_t > techo) - (objetivo_t < techo)
-                # mover primero el lado que abre el hueco
                 if mt > 0 or ms < 0:
                     if mt > 0:
                         techo += 1
@@ -411,7 +548,6 @@ def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
                         techo -= 1
                 ultimo_cambio = c
         else:
-            # embudo de salida
             if c - ultimo_cambio >= 1:
                 if suelo > 0:
                     suelo -= 1
@@ -420,19 +556,52 @@ def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
                 elif techo > 6:
                     techo -= 1
                 ultimo_cambio = c
+        paredes[c] = (suelo, techo)
         for r in range(suelo):
             s.bloques.add((c, r))
         for r in range(techo, 10):
             s.bloques.add((c, r))
-        if pinchos and c < fin_tunel and techo - suelo >= hueco_min + 1 and rng.random() < 0.18:
+        if pinchos and c < fin_tunel and techo - suelo >= hueco_min + 1 and rng.random() < pinchos:
             if rng.random() < 0.5 and suelo > 0:
                 s.pinchos[(c, suelo)] = 0
             elif techo < 9:
                 s.pinchos[(c, techo - 1)] = 180
         c += 1
+    if not camino_tunel(s, col + 4, col + largo, minimo, solape):
+        return False
+    # islas flotantes de bloques (a veces con pinchos) dentro del túnel
+    ultima = col + 10
+    for c in range(col + 14, fin_tunel - 6):
+        if c - ultima < 6 or rng.random() > islas:
+            continue
+        ancho, alto = rng.randint(2, 3), rng.choice([1, 1, 2])
+        cols = range(c, c + ancho)
+        lo = max(paredes[k][0] for k in cols)
+        hi = min(paredes[k][1] for k in cols)
+        if hi - lo < alto + minimo + 1:
+            continue
+        m = rng.randint(lo + 1, hi - alto - 1)
+        nuevos_b = {(k, r) for k in cols for r in range(m, m + alto)}
+        nuevos_p = {}
+        if rng.random() < 0.5:
+            k = rng.choice(list(cols))
+            if rng.random() < 0.5:
+                nuevos_p[(k, m + alto)] = 0
+            else:
+                nuevos_p[(k, m - 1)] = 180
+        if any(p in s.bloques or p in s.pinchos for p in list(nuevos_b) + list(nuevos_p)):
+            continue
+        s.bloques |= nuevos_b
+        s.pinchos.update(nuevos_p)
+        if camino_tunel(s, col + 4, col + largo, minimo, solape):
+            ultima = c + ancho
+            firma_trozo.append(('isla', m, alto, ancho))
+        else:
+            s.bloques -= nuevos_b
+            for p in nuevos_p:
+                del s.pinchos[p]
     s.portales.append((col + largo - 3, 1, ID_CUBO))
     s.portales.append((col + largo - 3, 4, ID_CUBO))
-    validar_tunel(s, col + 4, col + largo, hueco_min)
     firma = (modo, tuple(firma_trozo))
     if not lv.unico(firma):
         return False
@@ -440,73 +609,75 @@ def tunel(lv, col, largo, rng, modo, hueco_min, cambio_cada, pinchos, onda):
     return True
 
 
-def validar_tunel(s, ini, fin, hueco_min):
-    previo = None
-    for c in range(ini, fin):
-        libres = [r for r in range(10) if (c, r) not in s.bloques
-                  and (c, r) not in s.pinchos]
-        if not libres:
-            raise RuntimeError(f'columna cerrada en {c}')
-        intervalo = (min(libres), max(libres))
-        if intervalo[1] - intervalo[0] + 1 < min(hueco_min - 1, 4):
-            raise RuntimeError(f'hueco demasiado pequeño en {c}')
-        if previo:
-            solape = min(previo[1], intervalo[1]) - max(previo[0], intervalo[0]) + 1
-            if solape < 3:
-                raise RuntimeError(f'cambio brusco en {c}')
-        previo = intervalo
-
-
 def seccion_tunel(lv, col, largo, rng, **kw):
     for _ in range(50):
         if tunel(lv, col, largo, rng, **kw):
             return
-    raise RuntimeError('túnel repetido')
+    raise RuntimeError('no se pudo generar el túnel')
 
 
 # ------------------------------------------------------------------ bola
-def seccion_bola(lv, col, largo, rng, max_desnivel):
-    for intento in range(80):
-        s = lv.copia_vacia()
-        s.portales.append((col + 1, 1, ID_BOLA))
-        f = 0
-        c = col + 3
-        fin = col + largo - 10
-        firma = ['bola']
-        siguiente = c + 12
-        while c < col + largo:
-            if c < fin and c >= siguiente:
-                opciones = ['pincho_suelo', 'pincho_techo']
-                if f < max_desnivel:
-                    opciones.append('subir')
-                if f > 0:
-                    opciones.append('bajar')
-                ev = rng.choice(opciones)
-                if ev == 'subir':
-                    f += 1
-                elif ev == 'bajar':
-                    f -= 1
-                elif ev == 'pincho_suelo':
-                    s.pinchos[(c, f)] = 0
-                else:
-                    s.pinchos[(c, f + 2)] = 180
-                firma.append((ev, f))
-                siguiente = c + rng.randint(8, 11)
-            if c >= fin and f > 0 and c >= siguiente:
-                f -= 1
-                siguiente = c + 8
-            for r in range(f):
+def dibujar_bola(lv, col, largo, eventos):
+    """Construye el pasillo de la bola a partir de la lista de eventos."""
+    s = lv.copia_vacia()
+    s.portales.append((col + 1, 1, ID_BOLA))
+    por_col = dict(eventos)
+    f = 0
+    for c in range(col + 3, col + largo):
+        ev = por_col.get(c)
+        if ev == 'subir':
+            f += 1
+        elif ev == 'bajar':
+            f -= 1
+        elif ev == 'pincho_suelo':
+            s.pinchos[(c, f)] = 0
+        elif ev == 'pincho_techo':
+            s.pinchos[(c, f + 2)] = 180
+        elif ev == 'doble_suelo':
+            s.pinchos[(c, f)] = 0
+            s.pinchos[(c + 1, f)] = 0
+        elif ev == 'doble_techo':
+            s.pinchos[(c, f + 2)] = 180
+            s.pinchos[(c + 1, f + 2)] = 180
+        for r in range(f):
+            s.bloques.add((c, r))
+        if col + 6 <= c < col + largo - 4:
+            for r in range(f + 3, 8):            # techo macizo hasta arriba
                 s.bloques.add((c, r))
-            if col + 6 <= c < col + largo - 4:
-                for r in range(f + 3, f + 3 + 2):
-                    s.bloques.add((c, r))
-            c += 1
-        s.portales.append((col + largo - 6, 1, ID_GRAV_NORMAL))
-        s.portales.append((col + largo - 4, 1, ID_CUBO))
-        if tuple(firma) in lv.firmas:
-            continue
-        if comprobar(s, col, col + largo):
-            lv.firmas.add(tuple(firma))
+    s.portales.append((col + largo - 6, 1, ID_GRAV_NORMAL))
+    s.portales.append((col + largo - 4, 1, ID_CUBO))
+    return s, f
+
+
+def seccion_bola(lv, col, largo, rng, max_desnivel):
+    for intento in range(20):
+        eventos, f = [], 0
+        c = col + 15
+        fin = col + largo - 14
+        while c < fin:
+            opciones = ['pincho_suelo', 'pincho_techo', 'doble_suelo', 'doble_techo']
+            if f < max_desnivel:
+                opciones += ['subir', 'subir']
+            if f > 0:
+                opciones += ['bajar', 'bajar']
+            ev = rng.choice(opciones)
+            prueba = eventos + [(c, ev)]
+            s, _ = dibujar_bola(lv, col, largo, prueba)
+            if comprobar(s, col, min(c + 10, col + largo)):
+                eventos = prueba
+                f += (ev == 'subir') - (ev == 'bajar')
+                c += rng.randint(6, 9)
+            else:
+                c += 1
+        # bajar el pasillo al nivel del suelo antes de salir
+        while f > 0:
+            eventos.append((c, 'bajar'))
+            f -= 1
+            c += 6
+        firma = tuple(['bola'] + [e for _, e in eventos])
+        s, _ = dibujar_bola(lv, col, largo, eventos)
+        if c < col + largo - 8 and firma not in lv.firmas and comprobar(s, col, col + largo):
+            lv.firmas.add(firma)
             lv.fusionar(s)
             return
     raise RuntimeError('no se pudo generar una sección de bola jugable')
@@ -533,11 +704,18 @@ PALETA = [  # (fondo, suelo) estilo 1.0: colores vivos y fondo claro/oscuro suav
 ]
 
 
-def poner_colores(lv, col, i):
+def poner_colores(lv, col, i, largo):
     fondo, suelo = PALETA[i % len(PALETA)]
     lv.colores.append((col, CH_FONDO, fondo, 1.2))
     lv.colores.append((col, CH_SUELO, suelo, 1.2))
     lv.colores.append((col, CH_SUELO2, suelo, 1.2))
+    # a mitad de sección el fondo se oscurece y el suelo se aclara un poco
+    oscuro = tuple(int(v * 0.6) for v in fondo)
+    claro = tuple(min(255, int(v * 0.7 + 255 * 0.3)) for v in suelo)
+    mitad = col + largo // 2
+    lv.colores.append((mitad, CH_FONDO, oscuro, 2.5))
+    lv.colores.append((mitad, CH_SUELO, claro, 2.5))
+    lv.colores.append((mitad, CH_SUELO2, claro, 2.5))
 
 
 # -------------------------------------------------------------------- nivel
@@ -545,30 +723,42 @@ def construir(semilla=2209):
     rng = random.Random(semilla)
     lv = Nivel()
     secciones = [
-        ('cubo', 230, dict(tipos=['pincho', 'bloque', 'subir', 'bajar'], hmax=1)),
-        ('cubo', 280, dict(tipos=['escalera', 'subir', 'bajar', 'pincho', 'meseta'], hmax=3)),
-        ('nave', 300, dict(modo='nave', hueco_min=5, cambio_cada=3, pinchos=False, onda='libre')),
-        ('cubo', 270, dict(tipos=['orbe', 'pincho', 'bloque', 'pincho_bloque'], hmax=1)),
+        ('cubo', 230, dict(tipos=['pincho', 'bloque', 'subir', 'bajar', 'ritmo'], hmax=1)),
+        ('cubo', 280, dict(tipos=['escalera', 'subir', 'bajar', 'pincho', 'meseta',
+                                  'plataformas'], hmax=3)),
+        ('nave', 300, dict(modo='nave', hueco_min=5, cambio_cada=3, pinchos=0.08,
+                           onda='libre', islas=0.25)),
+        ('cubo', 270, dict(tipos=['orbe', 'orbe_doble', 'pincho', 'bloque', 'pincho_bloque',
+                                  'ritmo'], hmax=1)),
         ('bola', 260, dict(max_desnivel=1)),
-        ('cubo', 290, dict(tipos=['subir', 'pozo', 'pilares', 'bajar', 'escalera'], hmax=3)),
-        ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=4, pinchos=False, onda='libre')),
-        ('espejo', 260, dict(tipos=['pincho', 'subir', 'bajar', 'pozo'], hmax=1)),
-        ('nave', 300, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=True, onda='zigzag')),
-        ('cubo', 280, dict(tipos=['meseta', 'pincho_bloque', 'pozo', 'subir', 'bajar', 'pincho'], hmax=2)),
+        ('cubo', 290, dict(tipos=['subir', 'pozo', 'pilares', 'bajar', 'escalera',
+                                  'plataformas'], hmax=3)),
+        ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=4, pinchos=0.1,
+                          onda='libre', islas=0.2)),
+        ('espejo', 260, dict(tipos=['pincho', 'subir', 'bajar', 'pozo', 'ritmo',
+                                    'plataformas'], hmax=1)),
+        ('nave', 300, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=0.2,
+                           onda='zigzag', islas=0.3)),
+        ('cubo', 280, dict(tipos=['meseta', 'pincho_bloque', 'pozo', 'subir', 'bajar',
+                                  'pincho', 'plataformas', 'orbe'], hmax=2)),
         ('bola', 250, dict(max_desnivel=2)),
-        ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=3, pinchos=True, onda='zigzag')),
-        ('cubo', 280, dict(tipos=['orbe', 'escalera', 'pilares', 'bajar', 'pozo'], hmax=3)),
-        ('nave', 280, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=True, onda='libre')),
-        ('cubo', 300, dict(tipos=['pincho', 'meseta', 'orbe', 'pilares', 'subir', 'bajar',
-                                  'pincho_bloque', 'escalera'], hmax=2)),
+        ('ufo', 260, dict(modo='ufo', hueco_min=5, cambio_cada=3, pinchos=0.18,
+                          onda='zigzag', islas=0.3)),
+        ('cubo', 280, dict(tipos=['orbe', 'orbe_doble', 'escalera', 'pilares', 'bajar',
+                                  'pozo', 'ritmo'], hmax=3)),
+        ('nave', 280, dict(modo='nave', hueco_min=4, cambio_cada=2, pinchos=0.22,
+                           onda='libre', islas=0.4)),
+        ('cubo', 300, dict(tipos=['pincho', 'meseta', 'orbe', 'orbe_doble', 'pilares',
+                                  'subir', 'bajar', 'pincho_bloque', 'escalera',
+                                  'plataformas', 'ritmo'], hmax=2)),
     ]
     usado = sum(l for _, l, _ in secciones)
     secciones.append(('cubo', TOTAL_COLS - usado,
-                      dict(tipos=['bloque', 'pincho', 'subir', 'bajar'], hmax=1)))
+                      dict(tipos=['bloque', 'pincho', 'subir', 'bajar', 'orbe'], hmax=1)))
 
     col = 0
     for i, (tipo, largo, kw) in enumerate(secciones):
-        poner_colores(lv, max(col - 4, 0), i)
+        poner_colores(lv, max(col - 4, 0), i, largo)
         sub = random.Random(rng.random())
         if tipo == 'cubo':
             seccion_cubo(lv, col, largo, sub, **kw)
