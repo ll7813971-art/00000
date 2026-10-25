@@ -1052,6 +1052,23 @@ function makeBoltGlowSprite(S) {
   return cv;
 }
 let boltGlowSprite = makeBoltGlowSprite(256);
+// estrellita de 4 puntas para los destellos de la estela
+function makeStarSprite(S, core, glow) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d'), c = S / 2;
+  const h = g.createRadialGradient(c, c, 0, c, c, c);
+  h.addColorStop(0, glow); h.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = h; g.fillRect(0, 0, S, S);
+  g.fillStyle = core;
+  g.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? S * 0.1 : S * 0.48; g.lineTo(c + Math.cos(a) * rr, c + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+  return cv;
+}
+let starSprite = makeStarSprite(48, '#ffffff', 'rgba(253,224,71,0.55)');
+let starSpriteGold = makeStarSprite(48, '#f59e0b', 'rgba(245,158,11,0.35)');
+const trX = new Float32Array(64), trY = new Float32Array(64), trK = new Float32Array(64);   // estela (sin crear arrays por fotograma)
 function makeBoltGlowWarnSprite(S) {   // el mismo halo en naranja para los últimos segundos
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
@@ -2725,6 +2742,7 @@ function rebuildGraphics() {
   virusSprite = makeVirusSprite(256);
   boltSprite = makeBoltSprite(160);
   boltGlowSprite = makeBoltGlowSprite(256);
+  starSprite = makeStarSprite(48, '#ffffff', 'rgba(253,224,71,0.55)'); starSpriteGold = makeStarSprite(48, '#f59e0b', 'rgba(245,158,11,0.35)');
   boltGlowWarnSprite = makeBoltGlowWarnSprite(256);
   bombSprite = makeBombSprite(160);
   acidSprite = makeAcidSprite(160);
@@ -3171,12 +3189,10 @@ function render() {
   }
   drawList.sort((a, b) => a.dr - b.dr);
 
-  // estelas del rayo (debajo de las células): copias de la célula que se desvanecen y una cinta de energía
-  // que se estrecha y se apaga hacia la cola. Optimizada: la cinta se pinta en 4 tramos (no un trazo por
-  // punto), sin mezcla de luz, y con muchas piezas solo llevan estela las 4 mayores.
+  // estelas del rayo (debajo de las células): copias de la célula que se desvanecen, una cola de cometa (una
+  // figura que se estrecha suave hasta la punta, con degradado) y destellos que titilan. Barata: 2 rellenos
+  // por célula, sin mezcla de luz, y con muchas piezas solo llevan estela las 4 mayores.
   const lightT = settings.theme === 'light';
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const ribbon = lightT ? [[0.5, 0.3, '#facc15'], [0.15, 0.85, '#f59e0b']] : [[0.6, 0.28, '#facc15'], [0.14, 0.9, '#fffbeb']];
   for (const c of drawList) {
     const t = c.trail;
     if (!t || t.length < 6) continue;
@@ -3185,29 +3201,49 @@ function render() {
     if (p.cells.length > 4 && c.mass < trailMinMass(p)) continue;
     const n = t.length / 3, tl = trailLife(c), life = i => clamp(1 - (now - t[i * 3 + 2]) / tl, 0, 1);
     const end = boostEnding(p);
-    // 1) imágenes residuales (como mucho 4)
-    if (sr > 8) for (let q = 1, i = n - 3; q <= 4 && i >= 0; q++, i -= 3) {
+    // 1) imágenes residuales (como mucho 3, cada vez más pequeñas)
+    if (sr > 8) for (let q = 1, i = n - 3; q <= 3 && i >= 0; q++, i -= 4) {
       const k = life(i);
       if (k <= 0.05) break;
-      ctx.globalAlpha = (lightT ? 0.28 : 0.22) * k * k * end;
-      const rr = r * (0.55 + 0.4 * k);
+      ctx.globalAlpha = (lightT ? 0.26 : 0.2) * k * k * end;
+      const rr = r * (0.5 + 0.42 * k);
       ctx.drawImage(p.sprite, t[i * 3] - rr, t[i * 3 + 1] - rr, rr * 2, rr * 2);
     }
-    // 2) cinta en 4 tramos: cada tramo un solo trazo, más fino y transparente hacia la cola
-    const parts = 4, per = Math.ceil(n / parts);
-    for (const [w, a, col] of ribbon) {
-      ctx.strokeStyle = col;
-      for (let g = 0; g < parts; g++) {
-        const i0 = g * per, i1 = Math.min(n, (g + 1) * per);
-        if (i0 >= n) break;
-        const k = life(Math.min(n - 1, i1 - 1));
-        if (k <= 0.03) continue;
-        ctx.globalAlpha = a * k * end;
-        ctx.lineWidth = Math.max(1.2 / s, r * w * (0.3 + 0.7 * ((g + 1) / parts)));
-        ctx.beginPath(); ctx.moveTo(t[i0 * 3], t[i0 * 3 + 1]);
-        for (let i = i0 + 1; i < i1; i++) ctx.lineTo(t[i * 3], t[i * 3 + 1]);
-        if (i1 < n) ctx.lineTo(t[i1 * 3], t[i1 * 3 + 1]); else ctx.lineTo(c.x, c.y);
-        ctx.stroke();
+    // 2) cola de cometa: puntos de la estela + la célula, con un ancho que crece de la punta a la cabeza
+    let m = 0;
+    for (let i = 0; i < n; i++) { const k = life(i); if (k <= 0.02) continue; trX[m] = t[i * 3]; trY[m] = t[i * 3 + 1]; trK[m] = k; m++; }
+    trX[m] = c.x; trY[m] = c.y; trK[m] = 1; m++;
+    if (m < 3) continue;
+    for (let layer = 0; layer < 2; layer++) {
+      const W = r * (layer ? 0.2 : 0.62);
+      ctx.beginPath();
+      for (let side = 0; side < 2; side++) {
+        for (let q = 0; q < m; q++) {
+          const i = side ? m - 1 - q : q;
+          const a = Math.max(0, i - 1), b = Math.min(m - 1, i + 1);
+          let dx = trX[b] - trX[a], dy = trY[b] - trY[a]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+          const f = i / (m - 1), w = W * Math.pow(f, 0.8) * (0.35 + 0.65 * trK[i]) * (side ? -1 : 1);
+          const x = trX[i] - dy * w, y = trY[i] + dx * w;
+          (side || q) ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+      }
+      ctx.closePath();
+      const gr = ctx.createLinearGradient(trX[0], trY[0], c.x, c.y);
+      if (layer === 0) { gr.addColorStop(0, lightT ? 'rgba(250,204,21,0)' : 'rgba(250,204,21,0)'); gr.addColorStop(0.6, lightT ? 'rgba(250,204,21,0.35)' : 'rgba(250,204,21,0.28)'); gr.addColorStop(1, lightT ? 'rgba(245,158,11,0.6)' : 'rgba(253,224,71,0.55)'); }
+      else { gr.addColorStop(0, 'rgba(255,251,235,0)'); gr.addColorStop(0.5, lightT ? 'rgba(245,158,11,0.7)' : 'rgba(255,251,235,0.65)'); gr.addColorStop(1, lightT ? 'rgba(217,119,6,0.95)' : 'rgba(255,255,255,0.95)'); }
+      ctx.globalAlpha = end;
+      ctx.fillStyle = gr; ctx.fill();
+    }
+    // 3) destellos: estrellitas fijas en la estela que titilan y se apagan con ella
+    if (sr > 10) {
+      const star = lightT ? starSpriteGold : starSprite;
+      for (let i = 1; i < n - 1; i++) {
+        if ((t[i * 3 + 2] * 37 | 0) % 5) continue;      // ~1 de cada 5 puntos, siempre los mismos
+        const k = life(i);
+        if (k <= 0.05) continue;
+        const tw = 0.55 + 0.45 * Math.sin(now * 13 + i * 2.1), z = r * 0.17 * k * (0.7 + 0.3 * tw);
+        ctx.globalAlpha = k * tw * end;
+        ctx.drawImage(star, t[i * 3] - z, t[i * 3 + 1] - z, z * 2, z * 2);
       }
     }
   }
@@ -4431,7 +4467,9 @@ window.AgarNova = {
   get world() { return WORLD; },
   think: botThink, SMART,
   spawnCell(p, x, y, mass) { const c = new Cell(p, x, y, mass); p.cells.push(c); p.alive = true; return c; },
-  simulate(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n; i++) update(STEP); }
+  simulate(sec) { const n = Math.round(sec / STEP); for (let i = 0; i < n; i++) update(STEP); },
+  // para medir el coste de pintar (pruebas): pinta n fotogramas seguidos y espera a que se rastericen
+  benchRender(n) { const t0 = performance.now(); for (let i = 0; i < n; i++) { render(); ctx.getImageData(0, 0, 1, 1); } return (performance.now() - t0) / n; }
 };
 })();
 </script>
