@@ -315,12 +315,13 @@ body.spec #lbList li.watch{outline:2px solid var(--g1);outline-offset:-2px}
 .sb-btn:active{transform:scale(.94)}
 .sb-auto[aria-pressed="true"]{background:var(--grad-warm);color:#1a1033;border-color:transparent}
 .sb-play{background:var(--grad-main);color:#fff;border-color:transparent}
-.sb-info{display:flex;flex-direction:column;align-items:center;min-width:120px;max-width:44vw;padding:0 6px;line-height:1.15}
-.sb-info b{font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sb-info{display:flex;flex-direction:column;align-items:center;flex:1 1 auto;min-width:0;width:150px;max-width:44vw;padding:0 4px;line-height:1.2;white-space:nowrap;overflow:hidden}
+.sb-info>*{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-info b{font-size:16px;font-weight:900}
 .sb-lbl{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .sb-lbl em{font-style:normal;color:var(--accent-text)}
 #specMass{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-@media (max-width:420px){.sb-btn{width:38px;height:38px}.sb-info{min-width:90px}}
+@media (max-width:420px){#specBar{gap:6px;padding:6px}.sb-btn{width:38px;height:38px}.sb-info{width:96px}.sb-info b{font-size:15px}.sb-lbl{font-size:9.5px;letter-spacing:.06em}#specMass{font-size:11px}}
 #leftCol{position:absolute;top:calc(12px + var(--st));left:calc(12px + var(--sl));display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 #stats{padding:10px 16px 11px;border-radius:18px;min-width:168px}
 #stats .lbl{font-size:10.5px;letter-spacing:.2em;color:var(--muted);font-weight:800}
@@ -2759,7 +2760,13 @@ function updateCamera(dt) {
     s = viewScale(c.sr) * (target === human ? userZoom : state === 'spectating' ? 0.9 * specZoom : 0.78);
     // Al observar (menú y espectador) la cámara no se aleja más de ~3.600 px: siguiendo a un gigante se veía
     // medio mapa a la vez y el móvil tenía que dibujar y pensar por cientos de células (iba a 5 FPS en Ultra)
-    if (target !== human) s = Math.max(s, Math.max(vw, vh) / (state === 'spectating' ? 3600 / Math.min(1.3, Math.max(0.77, specZoom)) : 3600));
+    if (target !== human) {
+      let ext = 0;                                     // radio que ocupan todas sus piezas desde su centro
+      for (const q of target.cells) ext = Math.max(ext, Math.hypot(q.x - c.x, q.y - c.y) + q.r);
+      const fit = Math.min(vw, vh) / (2.5 * Math.max(60, ext));                          // lo justo para verlo entero
+      const lim = Math.max(vw, vh) / (state === 'spectating' ? 3600 / Math.min(1.3, Math.max(0.77, specZoom)) : 3600);
+      s = Math.max(s, Math.min(lim, fit));
+    }
   }
   cam.s = lerp(cam.s, s, 1 - Math.exp(-dt * 2.6));
 }
@@ -3226,6 +3233,14 @@ function drawMinimap() {
     mctx.beginPath(); mctx.arc(c.x * k, c.y * k, Math.max(1.4, c.r * k), 0, TAU); mctx.fill();
   }
   mctx.globalAlpha = 1;
+  if (state === 'spectating' && specTarget && specTarget.alive) {
+    const hw = vw / 2 / cam.s, hh = vh / 2 / cam.s;
+    mctx.strokeStyle = theme.mmView; mctx.lineWidth = 1;
+    mctx.strokeRect((cam.x - hw) * k, (cam.y - hh) * k, hw * 2 * k, hh * 2 * k);
+    const c = biggest(specTarget);
+    mctx.beginPath(); mctx.arc(c.x * k, c.y * k, Math.max(3, c.r * k) + 2, 0, TAU);
+    mctx.strokeStyle = theme.mmMe; mctx.lineWidth = 1.6; mctx.stroke();
+  }
   if (human.alive) {
     const hw = vw / 2 / cam.s, hh = vh / 2 / cam.s;
     mctx.strokeStyle = theme.mmView;
@@ -3541,17 +3556,18 @@ function syncSpec() {
   const r = rankings().indexOf(t);
   $('specName').textContent = t.name; $('specName').style.color = t.color;
   $('specRank').textContent = r >= 0 ? '#' + (r + 1) : '';
-  $('specMass').textContent = fmt(t.mass) + ' de masa';
+  $('specMass').textContent = fmt(t.mass) + (innerWidth < 420 ? '' : ' de masa');
 }
 function updateSpec(dt) {
   // si el que miras muere (aunque reaparezca enseguida), pasas a quien se lo comió (o al líder)
   if (!specTarget || !specTarget.alive || specTarget.deaths !== specDeaths) {
     const k = specTarget && specTarget.lastKiller;
-    specTarget = k && k.alive && k !== human ? k : leader();
+    // siguiendo al líder (👑) pasa al nuevo líder; si elegiste tú a quién mirar, pasa a quien se lo comió
+    specTarget = !specAuto && k && k.alive && k !== human ? k : leader();
     syncSpec();
   }
   if (specTarget) specDeaths = specTarget.deaths;
-  if (specAuto && now > specSwitchAt) { const l = leader(); if (l && l !== specTarget && (!specTarget || l.mass > specTarget.mass * 1.15)) specTarget = l; specSwitchAt = now + 4; }
+  if (specAuto && now > specSwitchAt) { const l = leader(); if (l && l !== specTarget && (!specTarget || l.mass > specTarget.mass * 1.05)) specTarget = l; specSwitchAt = now + 3; }
   lbT -= dt; hudT -= dt; mmT -= dt;
   if (lbT <= 0) { lbT = 0.8; renderLeaderboard(); }
   if (hudT <= 0) { hudT = 0.3; syncSpec(); }
@@ -3609,6 +3625,14 @@ function updateJoy(x, y) {
 }
 
 canvas.addEventListener('pointerdown', e => {
+  if (state === 'spectating') {                    // mirando: toca (o haz clic en) una célula para seguir a su dueño
+    e.preventDefault();
+    const wx = cam.x + (e.clientX - vw / 2) / cam.s, wy = cam.y + (e.clientY - vh / 2) / cam.s;
+    let best = null, bd = 40 / cam.s;
+    for (const c of allCells) { if (c.owner === human) continue; const d = Math.hypot(c.x - wx, c.y - wy) - c.r; if (d < bd) { bd = d; best = c; } }
+    if (best) { specWatch(best.owner); Sound.click(); }
+    return;
+  }
   if (e.pointerType === 'mouse') { setInputMode('mouse'); input.mx = e.clientX; input.my = e.clientY; return; }
   setInputMode('touch');
   e.preventDefault();
@@ -3670,6 +3694,8 @@ window.addEventListener('keydown', e => {
     else if (k === 'ArrowRight' || k === 'Tab') { e.preventDefault(); specPick(1); }
     else if (k === 'Enter') { stopSpectate(); startGame(); }
     else if (k === 'l' || k === 'L') { specAuto = true; specTarget = leader(); syncSpec(); }
+    else if (k === 'm' || k === 'M') setSetting('sound', !settings.sound);
+    else if (k === 't' || k === 'T') applyTheme(settings.theme === 'dark' ? 'light' : 'dark');
     return;
   }
   const tag = e.target && e.target.tagName;

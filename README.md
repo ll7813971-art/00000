@@ -103,7 +103,9 @@ Abre `index.html` en cualquier navegador moderno (doble clic o sírvelo con cual
 - **Bots siempre en movimiento:** si su objetivo queda encima de ellos o al otro lado del muro, siguen su rumbo
   (dándose la vuelta contra el muro) en vez de pararse; al disparar a un virus avanzan despacio hacia él.
 - **Modo espectador** (botón en el menú): mira la partida sin jugar. Sigue al líder (👑) o a quien elijas con
-  ◀ ▶ (o ← →) o tocando su fila en la clasificación; si el que miras muere, pasas a quien se lo comió.
+  ◀ ▶ (o ← →), tocando su fila en la clasificación o tocando su célula; si el que miras muere, pasas al
+  nuevo líder (con 👑) o a quien se lo comió. La cámara siempre enseña entero al que miras y el minimapa
+  marca a quién miras y la zona visible. T y M (tema y sonido) también funcionan.
   Rueda para acercar/alejar, ▶ para jugar, ✕ o Esc para volver. Optimizado: la cámara no se aleja más de
   ~3.600 px, menos partículas, sin viñeta y la clasificación, la barra y el minimapa se refrescan menos.
 - **Más optimización:** la masa de cada célula se pinta con imágenes ya preparadas (escribir texto en cada
