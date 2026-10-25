@@ -495,14 +495,15 @@ function updateSiren() {
     sOsc = actx.createOscillator(); sGain = actx.createGain(); sGain.gain.value = 0;
     sOsc.type = 'triangle'; sOsc.connect(sGain); sGain.connect(master); sOsc.start();
   }
-  let f = 0, v = 0;
+  let f = 0, v = 0, wantType = 'triangle';
   if (state === 'play' && !paused && !muted) {
     if (ghosts.some(g => g.state === 'eaten' || g.state === 'enter')) {
       f = 600 + 700 * ((frame % 10) / 10); v = 0.12;
     } else if (frightT > 0) {
-      // cuando los fantasmas empiezan a parpadear el sonido se acelera
-      const per = frightT <= cfg.flashes * 28 ? 8 : 16;
-      f = 180 + 260 * ((frame % per) / per); v = 0.15;
+      // fantasmas azules: el "güiu-güiu" rápido de la recreativa (onda cuadrada, barrido de tono ascendente)
+      const p = (frame % 8) / 8;
+      f = 220 + 520 * p * p; v = 0.1;
+      wantType = 'square';
     } else {
       // sirena en 5 fases, cada vez más aguda y rápida según quedan menos puntos
       const stage = dotsLeft > 180 ? 0 : dotsLeft > 120 ? 1 : dotsLeft > 70 ? 2 : dotsLeft > 30 ? 3 : 4;
@@ -510,6 +511,7 @@ function updateSiren() {
       f = 360 + stage * 70 + 260 * (p < 0.5 ? p * 2 : 2 - p * 2); v = 0.12;
     }
   }
+  if (sOsc.type !== wantType) sOsc.type = wantType;
   const t = actx.currentTime;
   sGain.gain.setTargetAtTime(v, t, 0.015);
   if (f) sOsc.frequency.setTargetAtTime(f, t, 0.004);
