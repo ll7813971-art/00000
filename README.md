@@ -24,6 +24,8 @@ abre `index.html` y pulsa **JUGAR**.
   testigos, huyen por ventilas, se autorreportan, sabotean y mienten en el chat.
   Tres niveles de dificultad.
 - **Fantasmas**: si mueres, sigues haciendo tareas atravesando paredes.
+- **Muebles sólidos**: mesas, motores, camas, cajas y consolas bloquean el paso y se dibujan por delante o por detrás según la posición.
+- **Mesa de Administración**: muestra cuántos tripulantes hay en cada sala (no funciona con las comunicaciones saboteadas).
 - Sonidos sintetizados, mapa con tareas y sabotajes, pausa y ajustes guardados.
 
 ## Controles
