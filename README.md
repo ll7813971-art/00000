@@ -19,6 +19,13 @@ Para programar: el código está en `index.html` (usa `lib/three.min.js`); `Cubo
   Con su comida en la mano (zanahoria → cerdos, trigo → ovejas, semillas → gallinas) te siguen; dásela a dos y se enamoran y **tienen una cría** que sigue a su madre y crece.
   Los slimes son curiosos y te persiguen saltando; Chispa calcula rutas por el aire, te avisa de la TNT y, si te quedas quieto, explora y te enseña minerales y cristales cercanos.
   Pulsa **P** (o activa «Ver rutas» en el menú) para ver las rutas que calcula cada criatura, y apunta a una para ver qué está haciendo.
+- **Interfaz nueva con degradados**: menú con panorama giratorio y frase amarilla al estilo Minecraft, barra de carga, botones de piedra/hierba,
+  barra de objetos con brillo, inventario con **pestañas y buscador**, *tooltips* morados, avisos de **logros** y chat.
+- **Detalles de Minecraft**: hierba alta y flores (amapola, diente de león, aciano, flor estelar que brilla, arbusto seco), **vacas**,
+  **lluvia, nieve y tormentas con rayos**, cielo con degradado y atardeceres, agacharse sin caerte de los bordes, sonido de pasos según el suelo,
+  brazo en primera persona, contador de días, información detallada con F3 y **15 logros**.
+- **Chat de comandos** (T o /): `/ayuda`, `/dia`, `/noche`, `/tiempo rapido`, `/lluvia`, `/tormenta`, `/despejado`, `/tp x z`,
+  `/invocar vaca 5`, `/limpiar`, `/dar farol`, `/volar`, `/semilla`, `/logros`. Si escribes sin `/`, Chispa te contesta.
 - Cámara en primera persona, tercera persona y vista frontal (tecla V), con tu personaje animado.
 
 ## Controles (teclado y ratón)
@@ -26,7 +33,7 @@ Para programar: el código está en `index.html` (usa `lib/three.min.js`); `Cubo
 |---|---|
 | WASD · ratón | moverse · mirar |
 | Espacio | saltar (doble toque = volar) |
-| Shift | bajar volando / andar despacio |
+| Shift | agacharse (no te caes de los bordes) / bajar volando |
 | Ctrl o doble W | correr |
 | Click izquierdo | romper bloque / golpear criatura / encender TNT |
 | Click derecho | poner bloque / usar huevo o herramienta / acariciar criatura |
@@ -35,7 +42,8 @@ Para programar: el código está en `index.html` (usa `lib/three.min.js`); `Cubo
 | E | inventario creativo |
 | V | cambiar cámara |
 | F | volar sí/no |
-| T (mantener) | acelerar el tiempo |
+| T o / | chat de comandos (`/ayuda`) |
+| F3 | información detallada |
 | P | ver las rutas de las criaturas |
 | F11 | pantalla completa |
 
