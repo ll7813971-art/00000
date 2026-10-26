@@ -25,6 +25,11 @@ abre `index.html` y pulsa **JUGAR**.
   Tres niveles de dificultad.
   Si un bot pasa tiempo contigo, en la reunión te da coartada (y los impostores también usan coartadas).
 - **Fantasmas**: si mueres, sigues haciendo tareas atravesando paredes.
+- **Sombreros**: elige uno de 11 en el menú (los bots también llevan).
+- **Saludar** (`G` o el botón de la mano): tu tripulante salta y los bots cercanos te devuelven el saludo con bocadillos.
+- **Modo Difícil**: los tripulantes bot razonan solo con lo que han visto o con información pública. Recuerdan cuándo pasaron
+  por el sitio del cadáver y quién fue el último en estar cerca. Pillan a quien miente sobre la sala en la que estaba
+  si lo vieron en otra justo antes, evitan quedarse a solas con su principal sospechoso y aprenden de las expulsiones confirmadas.
 - **Muebles sólidos**: mesas, motores, camas, cajas y consolas bloquean el paso y se dibujan por delante o por detrás según la posición.
 - **Mesa de Administración**: muestra cuántos tripulantes hay en cada sala (no funciona con las comunicaciones saboteadas).
 - Sonidos sintetizados, mapa con tareas y sabotajes, pausa y ajustes guardados.
@@ -39,6 +44,7 @@ abre `index.html` y pulsa **JUGAR**.
 | Matar | `Q` | **MATAR** |
 | Sabotear | `F` | **SABOTEAR** |
 | Mapa | `M` o `Tab` | Botón de mapa |
+| Saludar | `G` | Botón de la mano |
 | Pausa / cerrar | `P` / `Esc` | Botón de pausa / ✕ |
 
 En el chat de las reuniones, escribe el nombre de alguien (por ejemplo «Rojo sus») para acusarle;
