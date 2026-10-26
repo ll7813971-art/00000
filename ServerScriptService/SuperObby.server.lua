@@ -124,9 +124,9 @@ local function deco(props)
 	return part(props)
 end
 
-local function billboard(adornee: BasePart, text: string, color: Color3, offsetY: number, width: number?)
+local function billboard(adornee: BasePart, text: string, color: Color3, offsetY: number, width: number?, height: number?)
 	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.new(width or 12, 0, 3, 0)
+	bb.Size = UDim2.new(width or 12, 0, height or 3, 0)
 	bb.StudsOffset = Vector3.new(0, offsetY, 0)
 	bb.MaxDistance = 150
 	bb.LightInfluence = 0
@@ -666,7 +666,7 @@ local function makeCheckpoint(stage: number, origin: Vector3, theme, label: stri
 		Material = Enum.Material.Neon,
 		Transparency = 0.35,
 	})
-	billboard(pad, string.format("ETAPA %d\n%s", stage, label), WHITE, 7, 14).Size = UDim2.new(14, 0, 4, 0)
+	billboard(pad, string.format("ETAPA %d\n%s", stage, label), WHITE, 7, 14, 4)
 
 	local attachment = Instance.new("Attachment")
 	attachment.Position = Vector3.new(0, 1, 0)
@@ -880,14 +880,14 @@ local function secPendulums(o: Vector3, th)
 			part({
 				Name = "Poste",
 				Size = Vector3.new(1.5, 21, 1.5),
-				CFrame = CFrame.new(o.X + side * 15, y + 9.5, pz),
+				CFrame = CFrame.new(o.X + side * 17, y + 9.5, pz),
 				Color = DARK,
 				Material = Enum.Material.Metal,
 			})
 		end
 		part({
 			Name = "Viga",
-			Size = Vector3.new(31.5, 1.5, 1.5),
+			Size = Vector3.new(35.5, 1.5, 1.5),
 			CFrame = CFrame.new(o.X, y + 20.25, pz),
 			Color = DARK,
 			Material = Enum.Material.Metal,
