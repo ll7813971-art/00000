@@ -1,0 +1,1 @@
+{ "name": "consola", "version": "0.1.0", "description": "Consola multilenguaje: /run <lenguaje> <código> ejecuta código en Python, JS, Go, Rust, C, C++, Java, Ruby, PHP, Perl, Bash y más" }
