@@ -23,6 +23,7 @@ abre `index.html` y pulsa **JUGAR**.
   y ventilas, llaman a reunión, acusan, se defienden y votan. Los bots impostores matan solo sin
   testigos, huyen por ventilas, se autorreportan, sabotean y mienten en el chat.
   Tres niveles de dificultad.
+  Si un bot pasa tiempo contigo, en la reunión te da coartada (y los impostores también usan coartadas).
 - **Fantasmas**: si mueres, sigues haciendo tareas atravesando paredes.
 - **Muebles sólidos**: mesas, motores, camas, cajas y consolas bloquean el paso y se dibujan por delante o por detrás según la posición.
 - **Mesa de Administración**: muestra cuántos tripulantes hay en cada sala (no funciona con las comunicaciones saboteadas).
