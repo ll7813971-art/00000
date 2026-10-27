@@ -25,6 +25,12 @@ abre `index.html` y pulsa **JUGAR**.
   Tres niveles de dificultad.
   Si un bot pasa tiempo contigo, en la reunión te da coartada (y los impostores también usan coartadas).
 - **Fantasmas**: si mueres, sigues haciendo tareas atravesando paredes.
+- **Roles de impostor** (activables en los ajustes; puedes elegir el tuyo), con animaciones propias:
+  - **Cambiaformas** (`C`): elige a quién imitar y toma su forma 30 s entre humo; puede matar disfrazado.
+  - **Fantasma** (`C`): se vuelve invisible 15 s con un efecto ondulante; así no puede matar, usar ventilas ni reportar.
+  - **Víbora**: sus víctimas burbujean y se disuelven en ácido a los 20 s si nadie las reporta.
+  Los bots que ven a alguien transformarse, desaparecer o aparecer de la nada lo dicen en la reunión, y si ven
+  la transformación siguen reconociendo al Cambiaformas por quien es de verdad.
 - **Sombreros**: elige uno de 11 en el menú (los bots también llevan).
 - **Saludar** (`G` o el botón de la mano): tu tripulante salta y los bots cercanos te devuelven el saludo con bocadillos.
 - **Modo Difícil**: los tripulantes bot razonan solo con lo que han visto o con información pública. Recuerdan cuándo pasaron
@@ -45,6 +51,7 @@ abre `index.html` y pulsa **JUGAR**.
 | Sabotear | `F` | **SABOTEAR** |
 | Mapa | `M` o `Tab` | Botón de mapa |
 | Saludar | `G` | Botón de la mano |
+| Habilidad de rol | `C` | Botón morado |
 | Pausa / cerrar | `P` / `Esc` | Botón de pausa / ✕ |
 
 En el chat de las reuniones, escribe el nombre de alguien (por ejemplo «Rojo sus») para acusarle;
